@@ -21,7 +21,7 @@ $ bazel build --config opt --config monolithic tensorflow:libtensorflow_c.so
 
 Then go build on go-tflite. If you don't love bazel, you can use this Makefile. Put this on the `tensorflow/lite/experimental/c`, and `make`. Sorry, I don't make sure this works on Linux or Mac.
 
-```
+```make
 SRCS = \
 	c_api.cc \
 	c_api_experimental.cc

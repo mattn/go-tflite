@@ -6,6 +6,7 @@ package tflite
 #endif
 #cgo CFLAGS: -I${SRCDIR}/../../tensorflow/tensorflow
 #cgo LDFLAGS: -L${SRCDIR}/../../tensorflow/tensorflow/tensorflow/lite/experimental/c -ltensorflowlite_c
+#cgo linux LDFLAGS: -ldl -lrt
 */
 import "C"
 import (

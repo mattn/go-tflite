@@ -4,7 +4,7 @@ package tflite
 #ifndef GO_TFLITE_H
 #include "tflite.go.h"
 #endif
-#cgo CFLAGS: -I${SRCDIR}/../../tensorflow/tensorflow -mms-bitfields
+#cgo CFLAGS: -I${SRCDIR}/../../tensorflow/tensorflow
 #cgo LDFLAGS: -L${SRCDIR}/../../tensorflow/tensorflow/tensorflow/lite/experimental/c -ltensorflowlite_c
 */
 import "C"

@@ -76,7 +76,6 @@ func main() {
 	wanted_width := input.Dim(2)
 	wanted_channels := input.Dim(3)
 	wanted_type := input.Type()
-	fmt.Println(wanted_height, wanted_width, wanted_channels, wanted_type)
 
 	resized := resize.Resize(uint(wanted_width), uint(wanted_height), img, resize.NearestNeighbor)
 	bounds := resized.Bounds()

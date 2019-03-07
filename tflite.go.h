@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <tensorflow/lite/experimental/c/c_api.h>
 
-extern void _go_error_reporter(void*, void*);
+extern void _go_error_reporter(void*, char*);
 
 static void
 _error_reporter(void *user_data, const char* format, va_list args) {

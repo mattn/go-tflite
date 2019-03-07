@@ -11,6 +11,8 @@ package tflite
 import "C"
 import (
 	"unsafe"
+
+	"github.com/mattn/go-pointer"
 )
 
 type Model struct {
@@ -56,8 +58,11 @@ func (o *InterpreterOptions) SetNumThread(num_threads int) {
 	C.TFL_InterpreterOptionsSetNumThreads(o.o, C.int32_t(num_threads))
 }
 
-func (o *InterpreterOptions) SetErrorReporter(f func(msg string), user_data interface{}) {
-	C._TFL_InterpreterOptionsSetErrorReporter(o.o, nil)
+func (o *InterpreterOptions) SetErrorReporter(f func(string, interface{}), user_data interface{}) {
+	C._TFL_InterpreterOptionsSetErrorReporter(o.o, pointer.Save(&callbackInfo{
+		user_data: user_data,
+		f:         f,
+	}))
 }
 
 type Interpreter struct {

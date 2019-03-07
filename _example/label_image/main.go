@@ -59,6 +59,9 @@ func main() {
 
 	options := tflite.NewInterpreterOptions()
 	options.SetNumThread(4)
+	options.SetErrorReporter(func(msg string, user_data interface{}) {
+		fmt.Println(msg)
+	}, nil)
 
 	interpreter := tflite.NewInterpreter(model, options)
 	if interpreter == nil {

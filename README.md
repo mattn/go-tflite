@@ -33,23 +33,27 @@ CXXFLAGS = -DTF_COMPILE_LIBRARY -I$(TENSORFLOW_ROOT) -I$(TENSORFLOW_ROOT)/tensor
 TARGET = libtensorflowlite_c
 ifeq ($(OS),Windows_NT)
 OS_ARCH = windows_x86_64
-TARGET := $(TARGET).dll
+TARGET_SHARED := $(TARGET).dll
+else
+ifeq ($(shell uname -m),x86_64)
+OS_ARCH = linux_x86_64
 else
 ifeq ($(shell uname -m),armv6l)
 OS_ARCH = linux_armv6l
 else
 OS_ARCH = rpi_armv7l
 endif
-TARGET := $(TARGET).so
+TARGET_SHARED := $(TARGET).so
+endif
 endif
 LDFLAGS += -L$(TENSORFLOW_ROOT)/tensorflow/lite/tools/make/gen/$(OS_ARCH)/lib
 LIBS = -ltensorflow-lite
 
 .SUFFIXES: .cpp .cxx .o
 
-all : $(TARGET)
+all : $(TARGET_SHARED)
 
-$(TARGET) : $(OBJS)
+$(TARGET_SHARED) : $(OBJS)
         g++ -shared -o $@ $(OBJS) $(LDFLAGS) $(LIBS)
 
 .cxx.o :
@@ -59,7 +63,7 @@ $(TARGET) : $(OBJS)
         g++ -std=c++14 -c $(CXXFLAGS) -I. $< -o $@
 
 clean :
-        rm -f *.o $(TARGET)
+        rm -f *.o $(TARGET_SHARED)
 ```
 
 ## License

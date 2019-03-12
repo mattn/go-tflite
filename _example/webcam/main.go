@@ -33,8 +33,9 @@ var (
 )
 
 type result struct {
-	classes []class
-	img     image.Image
+	output []byte
+	size   int
+	img    image.Image
 }
 
 type class struct {
@@ -117,8 +118,8 @@ func run() {
 	defer cam.Close()
 
 	// Start up the background capture
-	frameChan := make(chan image.Image, 1)
-	resultChan := make(chan result, 1)
+	frameChan := make(chan image.Image, 3)
+	resultChan := make(chan result, 3)
 	go capture(&wg, cam, frameChan, ctx)
 	go detect(&wg, resultChan, frameChan, ctx)
 
@@ -139,15 +140,31 @@ func run() {
 		// Run inference if we have a new frame to read
 		result := <-resultChan
 
+		classes := make([]class, 0, result.size)
+		b := result.output
+		var i int
+		for i = 0; i < result.size; i++ {
+			score := float64(b[i]) / 255.0
+			if score < 0.2 {
+				continue
+			}
+			classes = append(classes, class{score: score, index: i})
+		}
+		sort.Slice(classes, func(i, j int) bool {
+			return classes[i].score > classes[j].score
+		})
+
+		if len(classes) > 5 {
+			classes = classes[:5]
+		}
 		pic := pixel.PictureDataFromImage(result.img)
 		bounds := pic.Bounds()
 		sprite := pixel.NewSprite(pic, bounds)
 
-		imd.Clear()
 		win.Clear(colornames.Black)
 		sprite.Draw(win, mat)
 
-		for i, class := range result.classes {
+		for i, class := range classes {
 			s := fmt.Sprintf("%d %.5f %s\n", i, class.score, labels[class.index])
 			txt := text.New(pixel.V(10.0, 470.0-float64(30*i)), atlas)
 			txt.Color = color.White
@@ -215,8 +232,7 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 			resized := resize.Resize(uint(wanted_width), uint(wanted_height), img, resize.NearestNeighbor)
 			for y := 0; y < wanted_height; y++ {
 				for x := 0; x < wanted_width; x++ {
-					col := resized.At(x, y)
-					r, g, b, _ := col.RGBA()
+					r, g, b, _ := resized.At(x, y).RGBA()
 					bb[(y*wanted_width+x)*3+0] = byte(float64(b) / 255.0)
 					bb[(y*wanted_width+x)*3+1] = byte(float64(g) / 255.0)
 					bb[(y*wanted_width+x)*3+2] = byte(float64(r) / 255.0)
@@ -235,25 +251,12 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 			if status != tflite.OK {
 				log.Fatal("output failed")
 			}
-			classes := []class{}
-			for i := 0; i < output_size; i++ {
-				score := float64(b[i]) / 255.0
-				if score < 0.2 {
-					continue
-				}
-				classes = append(classes, class{score: score, index: i})
-			}
-			sort.Slice(classes, func(i, j int) bool {
-				return classes[i].score > classes[j].score
-			})
-			if len(classes) > 5 {
-				classes = classes[:5]
+			resultChan <- result{
+				output: b,
+				size:   output_size,
+				img:    img,
 			}
 
-			resultChan <- result{
-				classes: classes,
-				img:     img,
-			}
 		default:
 		}
 	}

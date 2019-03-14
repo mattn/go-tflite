@@ -21,12 +21,13 @@ func main() {
 	interpreter.AllocateTensors()
 
 	for i := -180; i < 180; i++ {
-		v := float64(i) * math.Pi / 180.0
+		v := float32(i) * math.Pi / 180.0
 		input := interpreter.GetInputTensor(0)
-		input.Float32s()[0] = float32(v)
+		input.SetFloat32s([]float32{v})
 		interpreter.Invoke()
-		got := float64(interpreter.GetOutputTensor(0).Float32s()[0])
-		want := math.Sin(v)
+		output := interpreter.GetOutputTensor(0)
+		got := float64(output.Float32s()[0])
+		want := math.Sin(float64(v))
 		if math.Abs(got-want) > 0.02 {
 			log.Fatal("bad", i, v, math.Abs(got-want))
 		}

@@ -10,6 +10,7 @@ package tflite
 */
 import "C"
 import (
+	"reflect"
 	"unsafe"
 
 	"github.com/mattn/go-pointer"
@@ -193,10 +194,10 @@ func (t *Tensor) QuantizationParams() QuantizationParams {
 	}
 }
 
-func (t *Tensor) CopyFromBuffer(b []byte) Status {
-	return Status(C.TFL_TensorCopyFromBuffer(t.t, unsafe.Pointer(&b[0]), C.size_t(t.ByteSize())))
+func (t *Tensor) CopyFromBuffer(b interface{}) Status {
+	return Status(C.TFL_TensorCopyFromBuffer(t.t, unsafe.Pointer(reflect.ValueOf(b).Pointer()), C.size_t(t.ByteSize())))
 }
 
-func (t *Tensor) CopyToBuffer(b []byte) Status {
-	return Status(C.TFL_TensorCopyToBuffer(t.t, unsafe.Pointer(&b[0]), C.size_t(t.ByteSize())))
+func (t *Tensor) CopyToBuffer(b interface{}) Status {
+	return Status(C.TFL_TensorCopyToBuffer(t.t, unsafe.Pointer(reflect.ValueOf(b).Pointer()), C.size_t(t.ByteSize())))
 }

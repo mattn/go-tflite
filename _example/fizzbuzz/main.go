@@ -38,18 +38,14 @@ func main() {
 
 	for i := 1; i <= 100; i++ {
 		input := interpreter.GetInputTensor(0)
-		ptr := input.Data()
-		dim := input.Dim(1)
-		nums := (*((*[1<<31 - 1]float32)(ptr)))[:dim]
-		copy(nums, bin(i, 7))
+		input.CopyFromBuffer(bin(i, 7))
 
 		interpreter.Invoke()
 
 		output := interpreter.GetOutputTensor(0)
-		ptr = output.Data()
-		dim = output.Dim(1)
-		nums = (*((*[1<<31 - 1]float32)(ptr)))[:dim]
-		switch dec(nums) {
+		var nums [4]float32
+		output.CopyToBuffer(&nums[0])
+		switch dec(nums[:]) {
 		case 0:
 			fmt.Println(i)
 		case 1:

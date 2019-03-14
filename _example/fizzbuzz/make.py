@@ -1,8 +1,9 @@
-import numpy as np 
+import numpy as np
 from tensorflow.contrib.keras.api.keras.models import Sequential, model_from_json
 from tensorflow.contrib.keras.api.keras.layers import Dense, Dropout, Activation
 from tensorflow.contrib.keras.api.keras.optimizers import SGD, Adam
 import tensorflow.contrib.lite as lite
+
 
 def fizzbuzz(i):
     if   i % 15 == 0: return np.array([0, 0, 0, 1])

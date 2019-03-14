@@ -1,14 +1,13 @@
 package tflite
 
 import (
-	"log"
 	"testing"
 )
 
 func TestXOR(t *testing.T) {
 	model := NewModelFromFile("testdata/xor_model.tflite")
 	if model == nil {
-		log.Fatal("cannot load model")
+		t.Fatal("cannot load model")
 	}
 	defer model.Delete()
 

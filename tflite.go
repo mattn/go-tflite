@@ -169,35 +169,30 @@ func (t *Tensor) ByteSize() uint {
 }
 
 func (t *Tensor) Uint8s() []uint8 {
-	num := t.NumDims()
-	b := make([]uint8, num)
-	s := C.TFL_TensorCopyToBuffer(t.t, unsafe.Pointer(&b[0]), C.size_t(t.ByteSize()))
-	if s != 0 {
-		return nil
+	ptr := C.TFL_TensorData(t.t)
+	if ptr != nil {
+		num := t.NumDims()
+		return (*((*[1<<31 - 1]uint8)(ptr)))[:num]
 	}
-	return b
+	return nil
 }
 
-func (t *Tensor) Ints() []int {
-	num := t.NumDims()
+func (t *Tensor) Int32s() []int32 {
 	ptr := C.TFL_TensorData(t.t)
-	data := *((*[]C.int32_t)(ptr))
-	ints := make([]int, num)
-	for i := 0; i < num; i++ {
-		ints[i] = int(data[i])
+	if ptr != nil {
+		num := t.NumDims()
+		return (*((*[1<<31 - 1]int32)(ptr)))[:num]
 	}
-	return ints
+	return nil
 }
 
-func (t *Tensor) Floats() []float64 {
-	num := t.NumDims()
+func (t *Tensor) Float32s() []float32 {
 	ptr := C.TFL_TensorData(t.t)
-	data := *((*[]C.float)(ptr))
-	floats := make([]float64, num)
-	for i := 0; i < num; i++ {
-		floats[i] = float64(data[i])
+	if ptr != nil {
+		num := t.NumDims()
+		return (*((*[1<<31 - 1]float32)(ptr)))[:num]
 	}
-	return floats
+	return nil
 }
 
 func (t *Tensor) Data() unsafe.Pointer {

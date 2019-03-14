@@ -74,7 +74,11 @@ type Interpreter struct {
 }
 
 func NewInterpreter(model *Model, options *InterpreterOptions) *Interpreter {
-	i := C.TFL_NewInterpreter(model.m, options.o)
+	var o *C.TFL_InterpreterOptions
+	if options != nil {
+		o = options.o
+	}
+	i := C.TFL_NewInterpreter(model.m, o)
 	if i == nil {
 		return nil
 	}

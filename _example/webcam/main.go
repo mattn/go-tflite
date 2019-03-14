@@ -28,6 +28,7 @@ import (
 )
 
 var (
+	video     = flag.String("camera", "0", "video cature")
 	modelPath = flag.String("model", "mobilenet_quant_v1_224.tflite", "path to model file")
 	labelPath = flag.String("label", "labels.txt", "path to label file")
 )
@@ -111,7 +112,7 @@ func run() {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	cam, err := gocv.OpenVideoCapture(0)
+	cam, err := gocv.OpenVideoCapture(*video)
 	if err != nil {
 		log.Fatal("failed reading cam", err)
 	}

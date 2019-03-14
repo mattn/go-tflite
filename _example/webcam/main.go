@@ -205,6 +205,7 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 
 	options := tflite.NewInterpreterOptions()
 	options.SetNumThread(4)
+	defer options.Delete()
 
 	interpreter := tflite.NewInterpreter(model, options)
 	if interpreter == nil {

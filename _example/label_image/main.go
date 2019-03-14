@@ -62,6 +62,7 @@ func main() {
 	options.SetErrorReporter(func(msg string, user_data interface{}) {
 		fmt.Println(msg)
 	}, nil)
+	defer options.Delete()
 
 	interpreter := tflite.NewInterpreter(model, options)
 	if interpreter == nil {

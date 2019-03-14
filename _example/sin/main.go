@@ -15,10 +15,7 @@ func main() {
 	}
 	defer model.Delete()
 
-	options := tflite.NewInterpreterOptions()
-	defer options.Delete()
-
-	interpreter := tflite.NewInterpreter(model, options)
+	interpreter := tflite.NewInterpreter(model, nil)
 	defer interpreter.Delete()
 
 	interpreter.AllocateTensors()
@@ -31,7 +28,8 @@ func main() {
 		got := float64(interpreter.GetOutputTensor(0).Float32s()[0])
 		want := math.Sin(v)
 		if math.Abs(got-want) > 0.02 {
-			fmt.Println("bad", i, v, math.Abs(got-want))
+			log.Fatal("bad", i, v, math.Abs(got-want))
 		}
+		fmt.Printf("sin(%v) = %v\n", v, got)
 	}
 }

@@ -65,6 +65,10 @@ func (o *InterpreterOptions) SetErrorReporter(f func(string, interface{}), user_
 	}))
 }
 
+func (o *InterpreterOptions) Delete() {
+	C.TFL_DeleteInterpreterOptions(o.o)
+}
+
 type Interpreter struct {
 	i *C.TFL_Interpreter
 }

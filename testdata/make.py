@@ -3,7 +3,6 @@ from tensorflow.contrib.keras.api.keras.models import Sequential, model_from_jso
 from tensorflow.contrib.keras.api.keras.layers import Dense, Dropout, Activation
 from tensorflow.contrib.keras.api.keras.optimizers import SGD
 import tensorflow.contrib.lite as lite
-import os.path
 
 model = Sequential()
 model.add(Dense(8, input_dim = 2))
@@ -15,7 +14,6 @@ model.fit(
     np.array([[0, 0], [0, 1.0], [1.0, 0], [1.0, 1.0]]),
     np.array([[0.0], [1.0], [1.0], [0.0]]),
     batch_size = 1, epochs = 300)
-#model.save_weights(os.path.join('./', 'xor_model.h5'))
 model.save('xor_model.h5')
 
 converter = lite.TFLiteConverter.from_keras_model_file("xor_model.h5")

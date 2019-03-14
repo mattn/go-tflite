@@ -113,7 +113,7 @@ func main() {
 		score float64
 		index int
 	}
-	status = output.CopyToBuffer(b)
+	status = output.CopyToBuffer(&b[0])
 	if status != tflite.OK {
 		log.Fatal("output failed")
 	}

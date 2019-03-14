@@ -249,7 +249,7 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 			output := interpreter.GetOutputTensor(0)
 			output_size := output.Dim(output.NumDims() - 1)
 			b := make([]byte, output_size)
-			status = output.CopyToBuffer(b)
+			status = output.CopyToBuffer(&b[0])
 			if status != tflite.OK {
 				log.Fatal("output failed")
 			}

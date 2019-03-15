@@ -26,6 +26,6 @@ model.compile(loss = 'categorical_crossentropy', optimizer = 'adam', metrics = [
 model.fit(trX, trY, epochs = 3600, batch_size = 64)
 model.save('fizzbuzz_model.h5')
 
-converter = lite.TFLiteConverter.from_keras_model_file("fizzbuzz_model.h5")
+converter = lite.TFLiteConverter.from_keras_model_file('fizzbuzz_model.h5')
 tflite_model = converter.convert()
-open("fizzbuzz_model.tflite", "wb").write(tflite_model)
+open('fizzbuzz_model.tflite', 'wb').write(tflite_model)

@@ -87,7 +87,9 @@ func capture(wg *sync.WaitGroup, cam *gocv.VideoCapture, frameChan chan image.Im
 			continue
 		}
 
-		frameChan <- img
+		if len(frameChan) < cap(frameChan) {
+			frameChan <- img
+		}
 	}
 }
 
@@ -253,10 +255,12 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 			if status != tflite.OK {
 				log.Fatal("output failed")
 			}
-			resultChan <- result{
-				output: b,
-				size:   output_size,
-				img:    img,
+			if len(resultChan) < cap(resultChan) {
+				resultChan <- result{
+					output: b,
+					size:   output_size,
+					img:    img,
+				}
 			}
 
 		default:

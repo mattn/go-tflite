@@ -16,6 +16,6 @@ model.compile(loss = 'mean_squared_error', optimizer = sgd)
 model.fit(data[0], data[1], epochs = 1000, batch_size = 20, verbose = 0)
 model.save('sin_model.h5')
 
-converter = lite.TFLiteConverter.from_keras_model_file("sin_model.h5")
+converter = lite.TFLiteConverter.from_keras_model_file('sin_model.h5')
 tflite_model = converter.convert()
-open("sin_model.tflite", "wb").write(tflite_model)
+open('sin_model.tflite', 'wb').write(tflite_model)

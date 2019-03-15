@@ -24,6 +24,19 @@ func dec(b []float32) int {
 	panic("Sorry, I'm wrong")
 }
 
+func display(v []float32, i int) {
+	switch dec(v) {
+	case 0:
+		fmt.Println(i)
+	case 1:
+		fmt.Println("Fizz")
+	case 2:
+		fmt.Println("Buzz")
+	case 3:
+		fmt.Println("FizzBuzz")
+	}
+}
+
 func main() {
 	model := tflite.NewModelFromFile("fizzbuzz_model.tflite")
 	if model == nil {
@@ -37,23 +50,8 @@ func main() {
 	interpreter.AllocateTensors()
 
 	for i := 1; i <= 100; i++ {
-		input := interpreter.GetInputTensor(0)
-		input.CopyFromBuffer(bin(i, 7))
-
+		interpreter.GetInputTensor(0).CopyFromBuffer(bin(i, 7))
 		interpreter.Invoke()
-
-		output := interpreter.GetOutputTensor(0)
-		var nums [4]float32
-		output.CopyToBuffer(&nums[0])
-		switch dec(nums[:]) {
-		case 0:
-			fmt.Println(i)
-		case 1:
-			fmt.Println("Fizz")
-		case 2:
-			fmt.Println("Buzz")
-		case 3:
-			fmt.Println("FizzBuzz")
-		}
+		display(interpreter.GetOutputTensor(0).Float32s(), i)
 	}
 }

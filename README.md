@@ -2,6 +2,8 @@
 
 Go binding for TensorFlow Lite
 
+![](https://raw.githubusercontent.com/mattn/go-tflite/master/screenshots/screenshot.png)
+
 ## Usage
 
 ```go

@@ -168,3 +168,7 @@ func (t *Tensor) Int8s() []int8 {
 	n := t.ByteSize()
 	return (*((*[1<<31 - 1]int8)(ptr)))[:n]
 }
+
+func (t *Tensor) String() string {
+	return t.Name()
+}

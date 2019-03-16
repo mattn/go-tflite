@@ -16,6 +16,8 @@ import (
 	"github.com/mattn/go-pointer"
 )
 
+//go:generate stringer -type TensorType,Status -output type_string.go .
+
 type Model struct {
 	m *C.TFL_Model
 }

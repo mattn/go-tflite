@@ -143,8 +143,8 @@ func run() {
 		// Run inference if we have a new frame to read
 		result := <-resultChan
 
-		classes := make([]class, 0, result.size)
 		b := result.output
+		classes := make([]class, 0, len(b))
 		var i int
 		for i = 0; i < result.size; i++ {
 			score := float64(b[i]) / 255.0
@@ -168,7 +168,11 @@ func run() {
 		sprite.Draw(win, mat)
 
 		for i, class := range classes {
-			s := fmt.Sprintf("%d %.5f %s\n", i, class.score, labels[class.index])
+			label := "unknown"
+			if class.index < len(labels) {
+				label = labels[class.index]
+			}
+			s := fmt.Sprintf("%d %.5f %s\n", i, class.score, label)
 			txt := text.New(pixel.V(10.0, 470.0-float64(30*i)), atlas)
 			txt.Color = color.White
 			txt.WriteString(s)
@@ -242,7 +246,7 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 					bb[(y*wanted_width+x)*3+2] = byte(float64(r) / 255.0)
 				}
 			}
-			input.CopyFromBuffer(bb)
+			copy(input.UInt8s(), bb)
 			status = interpreter.Invoke()
 			if status != tflite.OK {
 				log.Fatal("invoke failed")
@@ -251,10 +255,7 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 			output := interpreter.GetOutputTensor(0)
 			output_size := output.Dim(output.NumDims() - 1)
 			b := make([]byte, output_size)
-			status = output.CopyToBuffer(&b[0])
-			if status != tflite.OK {
-				log.Fatal("output failed")
-			}
+			copy(b, output.UInt8s())
 			if len(resultChan) < cap(resultChan) {
 				resultChan <- result{
 					output: b,

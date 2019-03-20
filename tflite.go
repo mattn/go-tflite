@@ -118,7 +118,7 @@ const (
 func (i *Interpreter) ResizeInputTensor(index int, dims []int) Status {
 	cdims := C.malloc(C.size_t(4 * len(dims)))
 	defer C.free(unsafe.Pointer(cdims))
-	s := C.TFL_InterpreterResizeInputTensor(i.i, C.int32_t(index), (*C.int32_t)(cdims), C.int32_t(len(dims)))
+	s := C.TFL_InterpreterResizeInputTensor(i.i, C.int32_t(index), (*C.int)(cdims), C.int32_t(len(dims)))
 	return Status(s)
 }
 

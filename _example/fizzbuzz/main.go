@@ -50,7 +50,8 @@ func main() {
 	interpreter.AllocateTensors()
 
 	for i := 1; i <= 100; i++ {
-		interpreter.GetInputTensor(0).CopyFromBuffer(bin(i, 7))
+		buf := bin(i, 7)
+		interpreter.GetInputTensor(0).CopyFromBuffer(&buf[0])
 		interpreter.Invoke()
 		display(interpreter.GetOutputTensor(0).Float32s(), i)
 	}

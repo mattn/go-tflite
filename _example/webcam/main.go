@@ -367,6 +367,8 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 
 	input := interpreter.GetInputTensor(0)
 	qp := input.QuantizationParams()
+	log.Printf("width: %v, height: %v, type: %v, scale: %v, zeropoint: %v", wanted_width, wanted_height, input.Type(), qp.Scale, qp.ZeroPoint)
+	log.Printf("input tensor count: %v, output tensor count: %v", interpreter.GetInputTensorCount(), interpreter.GetOutputTensorCount())
 	if qp.Scale == 0 {
 		qp.Scale = 1
 	}

@@ -106,7 +106,7 @@ func capture(wg *sync.WaitGroup, frameChan chan image.Image, ctx context.Context
 		}
 
 		if ok := cam.Read(&frame); !ok {
-			log.Fatal("failed reading cam")
+			break
 		}
 
 		// Encode Mat as a bmp (uncompressed)
@@ -349,14 +349,7 @@ func run() {
 
 	cancel()
 
-exit_frameChan:
-	for {
-		select {
-		case <-frameChan:
-		default:
-			break exit_frameChan
-		}
-	}
+	cam.Close()
 
 exit_resultChan:
 	for {
@@ -366,6 +359,16 @@ exit_resultChan:
 			break exit_resultChan
 		}
 	}
+
+exit_frameChan:
+	for {
+		select {
+		case <-frameChan:
+		default:
+			break exit_frameChan
+		}
+	}
+
 	wg.Wait()
 
 	close(frameChan)

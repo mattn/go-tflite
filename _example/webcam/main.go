@@ -106,6 +106,9 @@ func capture(wg *sync.WaitGroup, frameChan chan image.Image, ctx context.Context
 			return
 		default:
 		}
+		if len(frameChan) == cap(frameChan) {
+			continue
+		}
 
 		if ok := cam.Read(&frame); !ok {
 			break
@@ -121,9 +124,6 @@ func capture(wg *sync.WaitGroup, frameChan chan image.Image, ctx context.Context
 		// Push the frame to the channel
 		img, _, err := image.Decode(bytes.NewReader(buf))
 		if err != nil {
-			continue
-		}
-		if len(frameChan) == cap(frameChan) {
 			continue
 		}
 		bounds := img.Bounds()
@@ -201,7 +201,7 @@ func run() {
 
 	// Start up the background capture
 	frameChan := make(chan image.Image, 1)
-	resultChan := make(chan result, 1)
+	resultChan := make(chan result)
 	go capture(&wg, frameChan, ctx, cam, win)
 	go detect(&wg, resultChan, frameChan, ctx, interpreter, wanted_width, wanted_height, wanted_channels)
 
@@ -432,7 +432,6 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 					output_size := output.Dim(output.NumDims() - 1)
 					f := make([]float32, output_size)
 					copy(f, output.Float32s())
-					//fmt.Println(interpreter.GetOutputTensor(0).Float32s())
 					resultChan <- &quantFloat32Result{
 						output: f,
 						img:    img,

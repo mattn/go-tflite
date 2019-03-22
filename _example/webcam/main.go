@@ -224,7 +224,10 @@ func run() {
 
 	for !win.Closed() {
 		// Run inference if we have a new frame to read
-		resulti := <-resultChan
+		resulti, ok := <-resultChan
+		if !ok {
+			break
+		}
 
 		pic := pixel.PictureDataFromImage(resulti.Image())
 		bounds := pic.Bounds()
@@ -376,7 +379,7 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 			return
 		case img, ok := <-frameChan:
 			if !ok {
-				break
+				return
 			}
 			resized := resize.Resize(uint(wanted_width), uint(wanted_height), img, resize.NearestNeighbor)
 			if input.Type() == tflite.Float32 {

@@ -94,6 +94,8 @@ func loadLabels(filename string) ([]string, error) {
 
 func capture(wg *sync.WaitGroup, frameChan chan image.Image, ctx context.Context, cam *gocv.VideoCapture, win *pixelgl.Window) {
 	defer wg.Done()
+	defer close(frameChan)
+	defer cam.Close()
 
 	frame := gocv.NewMat()
 	defer frame.Close()
@@ -112,7 +114,8 @@ func capture(wg *sync.WaitGroup, frameChan chan image.Image, ctx context.Context
 		// Encode Mat as a bmp (uncompressed)
 		buf, err := gocv.IMEncode(".png", frame)
 		if err != nil {
-			log.Fatalf("Error encoding frame: %v", err)
+			log.Printf("Error encoding frame: %v", err)
+			return
 		}
 
 		// Push the frame to the channel
@@ -169,7 +172,6 @@ func run() {
 	if err != nil {
 		log.Fatal("failed reading cam", err)
 	}
-	defer cam.Close()
 
 	model := tflite.NewModelFromFile(*modelPath)
 	if model == nil {
@@ -348,38 +350,23 @@ func run() {
 	}
 
 	cancel()
-
-	cam.Close()
-
-exit_resultChan:
 	for {
-		select {
-		case <-resultChan:
-		default:
-			break exit_resultChan
+		if _, ok := <-resultChan; !ok {
+			break
 		}
 	}
-
-exit_frameChan:
-	for {
-		select {
-		case <-frameChan:
-		default:
-			break exit_frameChan
-		}
-	}
-
 	wg.Wait()
-
-	close(frameChan)
-	close(resultChan)
 }
 
 func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image.Image, ctx context.Context, interpreter *tflite.Interpreter, wanted_width, wanted_height, wanted_channels int) {
 	defer wg.Done()
+	defer close(resultChan)
 
 	input := interpreter.GetInputTensor(0)
 	qp := input.QuantizationParams()
+	if qp.Scale == 0 {
+		qp.Scale = 1
+	}
 	bb := make([]byte, wanted_width*wanted_height*wanted_channels)
 	ff := make([]float32, wanted_width*wanted_height*wanted_channels)
 
@@ -387,7 +374,10 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 		select {
 		case <-ctx.Done():
 			return
-		case img := <-frameChan:
+		case img, ok := <-frameChan:
+			if !ok {
+				break
+			}
 			resized := resize.Resize(uint(wanted_width), uint(wanted_height), img, resize.NearestNeighbor)
 			if input.Type() == tflite.Float32 {
 				for y := 0; y < wanted_height; y++ {
@@ -412,7 +402,8 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 			}
 			status := interpreter.Invoke()
 			if status != tflite.OK {
-				log.Fatal("invoke failed")
+				log.Println("invoke failed")
+				return
 			}
 
 			output := interpreter.GetOutputTensor(0)
@@ -438,6 +429,7 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 					output_size := output.Dim(output.NumDims() - 1)
 					f := make([]float32, output_size)
 					copy(f, output.Float32s())
+					//fmt.Println(interpreter.GetOutputTensor(0).Float32s())
 					resultChan <- &quantFloat32Result{
 						output: f,
 						img:    img,
@@ -453,8 +445,6 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 					img:    img,
 				}
 			}
-
-		default:
 		}
 	}
 }

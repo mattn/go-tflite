@@ -245,7 +245,7 @@ func run() {
 			for i = 0; i < len(t.clazz); i++ {
 				idx := int(t.clazz[i] + 1)
 				score := float64(t.score[i])
-				if score < 0.4 {
+				if score < 0.6 {
 					continue
 				}
 				classes = append(classes, ssdClass{loc: t.loc[i], score: score, index: idx})
@@ -284,7 +284,7 @@ func run() {
 			var i int
 			for i = 0; i < len(b); i++ {
 				score := float64(b[i])
-				if score < 0.2 {
+				if score < 0.1 {
 					continue
 				}
 				classes = append(classes, quantClass{score: score, index: i})
@@ -388,9 +388,12 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 				for y := 0; y < wanted_height; y++ {
 					for x := 0; x < wanted_width; x++ {
 						r, g, b, _ := resized.At(x, y).RGBA()
-						ff[(y*wanted_width+x)*3+0] = float32(float64(int(b)-qp.ZeroPoint) * qp.Scale)
-						ff[(y*wanted_width+x)*3+1] = float32(float64(int(g)-qp.ZeroPoint) * qp.Scale)
-						ff[(y*wanted_width+x)*3+2] = float32(float64(int(r)-qp.ZeroPoint) * qp.Scale)
+						//ff[(y*wanted_width+x)*3+0] = float32(float64(int(r)-qp.ZeroPoint) * qp.Scale)
+						//ff[(y*wanted_width+x)*3+1] = float32(float64(int(g)-qp.ZeroPoint) * qp.Scale)
+						//ff[(y*wanted_width+x)*3+2] = float32(float64(int(b)-qp.ZeroPoint) * qp.Scale)
+						ff[(y*wanted_width+x)*3+0] = float32(b)
+						ff[(y*wanted_width+x)*3+1] = float32(g)
+						ff[(y*wanted_width+x)*3+2] = float32(r)
 					}
 				}
 				copy(input.Float32s(), ff)
@@ -440,7 +443,6 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 					}
 				}
 			} else {
-				output := interpreter.GetOutputTensor(1)
 				output_size := output.Dim(output.NumDims() - 1)
 				b := make([]byte, output_size)
 				copy(b, output.UInt8s())

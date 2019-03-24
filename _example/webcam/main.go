@@ -388,12 +388,12 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 				for y := 0; y < wanted_height; y++ {
 					for x := 0; x < wanted_width; x++ {
 						r, g, b, _ := resized.At(x, y).RGBA()
-						//ff[(y*wanted_width+x)*3+0] = float32(float64(int(r)-qp.ZeroPoint) * qp.Scale)
-						//ff[(y*wanted_width+x)*3+1] = float32(float64(int(g)-qp.ZeroPoint) * qp.Scale)
-						//ff[(y*wanted_width+x)*3+2] = float32(float64(int(b)-qp.ZeroPoint) * qp.Scale)
-						ff[(y*wanted_width+x)*3+0] = float32(b)
-						ff[(y*wanted_width+x)*3+1] = float32(g)
-						ff[(y*wanted_width+x)*3+2] = float32(r)
+						ff[(y*wanted_width+x)*3+0] = float32(float64(int(r)-qp.ZeroPoint) * qp.Scale)
+						ff[(y*wanted_width+x)*3+1] = float32(float64(int(g)-qp.ZeroPoint) * qp.Scale)
+						ff[(y*wanted_width+x)*3+2] = float32(float64(int(b)-qp.ZeroPoint) * qp.Scale)
+						//ff[(y*wanted_width+x)*3+0] = float32(b)
+						//ff[(y*wanted_width+x)*3+1] = float32(g)
+						//ff[(y*wanted_width+x)*3+2] = float32(r)
 					}
 				}
 				copy(input.Float32s(), ff)

@@ -40,8 +40,10 @@ var colors = [21][3]uint8{
 
 func main() {
 	var model_path, image_path string
+	var clip bool
 	flag.StringVar(&model_path, "model", "deeplabv3_257_mv_gpu.tflite", "path to model file")
 	flag.StringVar(&image_path, "image", "example.jpg", "path to image file")
+	flag.BoolVar(&clip, "clip", false, "clip foreground image")
 	flag.Parse()
 
 	f, err := os.Open(image_path)
@@ -115,32 +117,57 @@ func main() {
 		log.Fatal("invoke failed")
 	}
 
-	canvas := image.NewRGBA(resized.Bounds())
-
 	output := interpreter.GetOutputTensor(0)
 	ff := output.Float32s()
 
-	for y := 0; y < dy; y++ {
-		for x := 0; x < dx; x++ {
-			ci := 0
-			cv := float32(-32767)
-			off := (y*dx + x) * 21
-			for i := 0; i < 21; i++ {
-				v := ff[off+i]
-				if cv < v {
-					cv = v
-					ci = i
+	base := image.NewRGBA(img.Bounds())
+
+	if clip {
+		bounds = img.Bounds()
+		xscale := float64(dx) / float64(bounds.Dx())
+		yscale := float64(dy) / float64(bounds.Dy())
+		for y := 0; y < bounds.Dy(); y++ {
+			for x := 0; x < bounds.Dx(); x++ {
+				ci := 0
+				cv := float32(-32767)
+				off := (int(float64(y)*yscale)*dx + int(float64(x)*xscale)) * 21
+				for i := 0; i < 21; i++ {
+					v := ff[off+i]
+					if cv < v {
+						cv = v
+						ci = i
+					}
+				}
+				if ci != 0 {
+					base.Set(x, y, img.At(x, y))
+				} else {
+					base.Set(x, y, color.RGBA{R: 0, G: 0, B: 0, A: 0})
 				}
 			}
-			c := colors[ci]
-			canvas.Set(x, y, color.RGBA{R: c[0], G: c[1], B: c[2], A: 100})
 		}
-	}
+	} else {
+		canvas := image.NewRGBA(resized.Bounds())
+		for y := 0; y < dy; y++ {
+			for x := 0; x < dx; x++ {
+				ci := 0
+				cv := float32(-32767)
+				off := (y*dx + x) * 21
+				for i := 0; i < 21; i++ {
+					v := ff[off+i]
+					if cv < v {
+						cv = v
+						ci = i
+					}
+				}
+				c := colors[ci]
+				canvas.Set(x, y, color.RGBA{R: c[0], G: c[1], B: c[2], A: 100})
+			}
+		}
 
-	canvasImg := resize.Resize(uint(img.Bounds().Dx()), uint(img.Bounds().Dy()), canvas, resize.NearestNeighbor)
-	base := image.NewRGBA(img.Bounds())
-	draw.Draw(base, base.Bounds(), img, image.Pt(0, 0), draw.Src)
-	draw.Draw(base, base.Bounds(), canvasImg, image.Pt(0, 0), draw.Over)
+		canvasImg := resize.Resize(uint(img.Bounds().Dx()), uint(img.Bounds().Dy()), canvas, resize.NearestNeighbor)
+		draw.Draw(base, base.Bounds(), img, image.Pt(0, 0), draw.Src)
+		draw.Draw(base, base.Bounds(), canvasImg, image.Pt(0, 0), draw.Over)
+	}
 
 	out, err := os.Create("output.png")
 	if err != nil {

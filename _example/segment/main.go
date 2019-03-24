@@ -41,7 +41,7 @@ var colors = [21][3]uint8{
 func main() {
 	var model_path, image_path string
 	flag.StringVar(&model_path, "model", "deeplabv3_257_mv_gpu.tflite", "path to model file")
-	flag.StringVar(&image_path, "image", "a1.png", "path to image file")
+	flag.StringVar(&image_path, "image", "example.jpg", "path to image file")
 	flag.Parse()
 
 	f, err := os.Open(image_path)

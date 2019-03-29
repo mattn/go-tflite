@@ -23,6 +23,7 @@ package ops
 #cgo LDFLAGS: -L${SRCDIR}/../../../../../tensorflow/tensorflow/tensorflow/lite/experimental/c -ltensorflowlite_c
 #cgo windows amd64 LDFLAGS: -L${SRCDIR}/../../../../../tensorflow/tensorflow/tensorflow/lite/tools/make/gen/windows_x86_64/lib
 #cgo linux amd64 LDFLAGS: -L${SRCDIR}/../../../../../tensorflow/tensorflow/tensorflow/lite/tools/make/gen/linux_x86_64/lib
+#cgo linux arm32 LDFLAGS: -L${SRCDIR}/../../../../../tensorflow/tensorflow/tensorflow/lite/tools/make/gen/rpi_armv7l/lib
 #cgo linux LDFLAGS: -ldl -lrt
 
 TfLiteRegistration* Register_EXTRACT_FEATURES();
@@ -48,5 +49,5 @@ func wrap(p *C.TfLiteRegistration) *tflite.ExpRegistration {
 }
 
 func Register_EXTRACT_FEATURES() *tflite.ExpRegistration { return wrap(C.Register_EXTRACT_FEATURES()) }
-func Register_NORMALIZE() *tflite.ExpRegistration { return wrap(C.Register_NORMALIZE()) }
-func Register_PREDICT() *tflite.ExpRegistration { return wrap(C.Register_PREDICT()) }
+func Register_NORMALIZE() *tflite.ExpRegistration        { return wrap(C.Register_NORMALIZE()) }
+func Register_PREDICT() *tflite.ExpRegistration          { return wrap(C.Register_PREDICT()) }

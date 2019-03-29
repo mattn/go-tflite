@@ -23,7 +23,7 @@ type result struct {
 
 func split(s string) []string {
 	s = regexp.MustCompile(`([?.!,])+`).ReplaceAllString(s, "$1")
-	s = regexp.MustCompile(`([?.!,])+\s+`).ReplaceAllString(s, "$1")
+	s = regexp.MustCompile(`([?.!,])+\s+`).ReplaceAllString(s, "$1\t")
 	s = regexp.MustCompile(`[ ]+`).ReplaceAllString(s, " ")
 	s = regexp.MustCompile(`\t+$`).ReplaceAllString(s, " ")
 	return strings.Split(s, "\t")
@@ -35,8 +35,7 @@ func smartreply(interpreter *tflite.Interpreter, s string) []result {
 	for _, word := range words {
 		dbuf.AddString(word)
 	}
-	input := interpreter.GetInputTensor(0)
-	input.WriteBuffer(dbuf.WriteToBuffer())
+	dbuf.WriteToTensorAsVector(interpreter.GetInputTensor(0))
 
 	var status tflite.Status
 

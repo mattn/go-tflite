@@ -45,11 +45,12 @@ static void look_context(TfLiteContext *context) {
   }
 }
 
-static void writeBuffer(TfLiteTensor *tensor, char *bytes, size_t size) {
+static void writeToTensorAsVector(TfLiteTensor *tensor, char *bytes, size_t size, int nelem) {
   static TfLiteIntArray dummy;
   TfLiteIntArray* new_shape = (TfLiteIntArray*)malloc(sizeof(dummy) + sizeof(dummy.data[0]) * 1);
   if (new_shape) {
-    new_shape->size = tensor->dims->size;
+    new_shape->size = 1;
+    new_shape->data[0] = nelem;
     memcpy(new_shape->data, tensor->dims->data, tensor->dims->size * sizeof(int));
   }
 
@@ -311,12 +312,6 @@ func (o *InterpreterOptions) ExpAddCustomOp(name string, reg *ExpRegistration, m
 	C.TFL_InterpreterOptionsAddCustomOp(o.o, ptr, r, C.int(minVersion), C.int(maxVersion))
 }
 
-// WriteBuffer write bytes to the tensor. This method reset dimension.
-func (t *Tensor) WriteBuffer(b []byte) error {
-	C.writeBuffer(t.t, (*C.char)(unsafe.Pointer(&b[0])), C.size_t(len(b)))
-	return nil
-}
-
 // DynamicBuffer is buffer hold multiple strings.
 type DynamicBuffer struct {
 	data   bytes.Buffer
@@ -334,8 +329,8 @@ func (d *DynamicBuffer) AddString(s string) {
 	}
 }
 
-// WriteToBuffer return bytes for the string type tensor.
-func (d *DynamicBuffer) WriteToBuffer() []byte {
+// WriteToTensorAsVector write buffer into the tensor as vector.
+func (d *DynamicBuffer) WriteToTensorAsVector(t *Tensor) {
 	var out bytes.Buffer
 
 	b := make([]byte, 4)
@@ -347,26 +342,27 @@ func (d *DynamicBuffer) WriteToBuffer() []byte {
 	binary.LittleEndian.PutUint32(b, uint32(num_strings))
 	out.Write(b)
 
-	if num_strings == 0 {
-		return out.Bytes()
-	}
+	if num_strings > 0 {
 
-	// Set offset of strings.
-	start := sizeof_int32_t + sizeof_int32_t*(num_strings+1)
-	offset := start
+		// Set offset of strings.
+		start := sizeof_int32_t + sizeof_int32_t*(num_strings+1)
+		offset := start
 
-	binary.LittleEndian.PutUint32(b, uint32(offset))
-	out.Write(b)
-
-	for i := 0; i < len(d.offset); i++ {
-		offset := start + d.offset[i]
 		binary.LittleEndian.PutUint32(b, uint32(offset))
 		out.Write(b)
+
+		for i := 0; i < len(d.offset); i++ {
+			offset := start + d.offset[i]
+			binary.LittleEndian.PutUint32(b, uint32(offset))
+			out.Write(b)
+		}
+
+		// Copy data of strings.
+		io.Copy(&out, &d.data)
 	}
 
-	// Copy data of strings.
-	io.Copy(&out, &d.data)
-	return out.Bytes()
+	b = out.Bytes()
+	C.writeToTensorAsVector(t.t, (*C.char)(unsafe.Pointer(&b[0])), C.size_t(len(b)), C.int(len(d.offset)))
 }
 
 func (t *Tensor) GetString(index int) string {

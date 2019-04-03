@@ -12,7 +12,7 @@ extern void _go_error_reporter(void*, char*);
 static void
 _error_reporter(void *user_data, const char* format, va_list args) {
   char *ptr;
-  asprintf(&ptr, format, args);
+  if (asprintf(&ptr, format, args)) {}
   _go_error_reporter(user_data, ptr);
   free(ptr);
 }

@@ -65,6 +65,14 @@ func (t *Tensor) Float32s() []float32 {
 	return (*((*[1<<29 - 1]float32)(ptr)))[:n]
 }
 
+func (t *Tensor) Float32At(at ...int) float32 {
+	pos := 0
+	for i := 0; i < t.NumDims(); i++ {
+		pos = pos*t.Dim(i) + at[i]
+	}
+	return t.Float32s()[pos]
+}
+
 func (t *Tensor) SetUint8s(v []uint8) error {
 	if t.Type() != UInt8 {
 		return ErrTypeMismatch

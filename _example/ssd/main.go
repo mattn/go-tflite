@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	inputPath  = flag.String("input", "", "path to the input image file")
+	inputPath  = flag.String("input", "example.jpg", "path to the input image file")
 	outputPath = flag.String("output", "output.png", "path to the output image file")
 	modelPath  = flag.String("model", "detect.tflite", "path to model file")
 	labelPath  = flag.String("label", "labelmap.txt", "path to label file")
@@ -34,7 +34,7 @@ type ssdClass struct {
 
 func loadLabels(filename string) ([]string, error) {
 	labels := []string{}
-	f, err := os.Open(*labelPath)
+	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}

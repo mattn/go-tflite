@@ -116,6 +116,8 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 }
 
 func main() {
+	flag.Parse()
+
 	labels, err := loadLabels(*labelPath)
 	if err != nil {
 		log.Fatal(err)

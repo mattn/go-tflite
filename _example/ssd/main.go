@@ -133,6 +133,11 @@ func main() {
 	}
 	defer cam.Close()
 
+	window.ResizeWindow(
+		int(cam.Get(gocv.VideoCaptureFrameWidth)),
+		int(cam.Get(gocv.VideoCaptureFrameHeight)),
+	)
+
 	model := tflite.NewModelFromFile(*modelPath)
 	if model == nil {
 		log.Fatal("cannot load model")

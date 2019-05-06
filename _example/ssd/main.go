@@ -2,34 +2,45 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"image"
-	_ "image/jpeg"
+	_ "image/png"
 	"log"
 	"os"
+	"os/signal"
 	"sort"
+	"sync"
+	"time"
 
-	"golang.org/x/image/colornames"
-
-	"github.com/llgcode/draw2d"
-	"github.com/llgcode/draw2d/draw2dimg"
 	"github.com/mattn/go-tflite"
 
-	"github.com/nfnt/resize"
+	"gocv.io/x/gocv"
+	"golang.org/x/image/colornames"
 )
 
 var (
-	inputPath  = flag.String("input", "example.jpg", "path to the input image file")
-	outputPath = flag.String("output", "output.png", "path to the output image file")
-	modelPath  = flag.String("model", "detect.tflite", "path to model file")
-	labelPath  = flag.String("label", "labelmap.txt", "path to label file")
+	video     = flag.String("camera", "0", "video cature")
+	modelPath = flag.String("model", "detect.tflite", "path to model file")
+	labelPath = flag.String("label", "labelmap.txt", "path to label file")
 )
+
+type ssdResult struct {
+	loc   [][4]float32
+	clazz []float32
+	score []float32
+	mat   gocv.Mat
+}
 
 type ssdClass struct {
 	loc   [4]float32
 	score float64
 	index int
+}
+
+type result interface {
+	Image() image.Image
 }
 
 func loadLabels(filename string) ([]string, error) {
@@ -46,36 +57,87 @@ func loadLabels(filename string) ([]string, error) {
 	return labels, nil
 }
 
-func maxFloat32(f []float32) (int, float32) {
-	mi := 0
-	mf := float32(0)
-	for i := 1; i < len(f); i++ {
-		if mf < f[i] {
-			mi = i
-			mf = f[i]
+func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResult, interpreter *tflite.Interpreter, wanted_width, wanted_height, wanted_channels int, cam *gocv.VideoCapture) {
+	defer wg.Done()
+	defer close(resultChan)
+
+	input := interpreter.GetInputTensor(0)
+	qp := input.QuantizationParams()
+	log.Printf("width: %v, height: %v, type: %v, scale: %v, zeropoint: %v", wanted_width, wanted_height, input.Type(), qp.Scale, qp.ZeroPoint)
+	log.Printf("input tensor count: %v, output tensor count: %v", interpreter.GetInputTensorCount(), interpreter.GetOutputTensorCount())
+	if qp.Scale == 0 {
+		qp.Scale = 1
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		if len(resultChan) == cap(resultChan) {
+			continue
+		}
+
+		frame := gocv.NewMat()
+		if ok := cam.Read(&frame); !ok {
+			frame.Close()
+			break
+		}
+
+		resized := gocv.NewMat()
+		gocv.Resize(frame, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
+		fb := resized.DataPtrUint8()
+		copy(input.UInt8s(), fb)
+		resized.Close()
+		status := interpreter.Invoke()
+		if status != tflite.OK {
+			log.Println("invoke failed")
+			return
+		}
+
+		output := interpreter.GetOutputTensor(0)
+		if output.Type() == tflite.Float32 {
+			if interpreter.GetOutputTensorCount() == 4 {
+				var loc [10][4]float32
+				var clazz [10]float32
+				var score [10]float32
+				var nums [1]float32
+				output.CopyToBuffer(&loc[0])
+				interpreter.GetOutputTensor(1).CopyToBuffer(&clazz[0])
+				interpreter.GetOutputTensor(2).CopyToBuffer(&score[0])
+				interpreter.GetOutputTensor(3).CopyToBuffer(&nums[0])
+				num := int(nums[0])
+
+				resultChan <- &ssdResult{
+					loc:   loc[:num],
+					clazz: clazz[:num],
+					score: score[:num],
+					mat:   frame,
+				}
+			}
 		}
 	}
-	return mi, mf
 }
 
 func main() {
-	flag.Parse()
-
 	labels, err := loadLabels(*labelPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	f, err := os.Open(*inputPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
+	// Setup Pixel window
+	window := gocv.NewWindow("Webcam Window")
+	defer window.Close()
 
-	img, _, err := image.Decode(f)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	cam, err := gocv.OpenVideoCapture(*video)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("failed reading cam", err)
 	}
+	defer cam.Close()
 
 	model := tflite.NewModelFromFile(*modelPath)
 	if model == nil {
@@ -85,9 +147,6 @@ func main() {
 
 	options := tflite.NewInterpreterOptions()
 	options.SetNumThread(4)
-	options.SetErrorReporter(func(format string, v interface{}) {
-		println(format, v)
-	}, nil)
 	defer options.Delete()
 
 	interpreter := tflite.NewInterpreter(model, options)
@@ -106,92 +165,92 @@ func main() {
 	wanted_width := input.Dim(2)
 	wanted_channels := input.Dim(3)
 
-	qp := input.QuantizationParams()
-	log.Printf("width: %v, height: %v, type: %v, scale: %v, zeropoint: %v", wanted_width, wanted_height, input.Type(), qp.Scale, qp.ZeroPoint)
-	log.Printf("input tensor count: %v, output tensor count: %v", interpreter.GetInputTensorCount(), interpreter.GetOutputTensorCount())
-	if qp.Scale == 0 {
-		qp.Scale = 1
-	}
-	bb := make([]byte, wanted_width*wanted_height*wanted_channels)
+	var wg sync.WaitGroup
+	wg.Add(1)
 
-	resized := resize.Resize(uint(wanted_width), uint(wanted_height), img, resize.NearestNeighbor)
-	for y := 0; y < wanted_height; y++ {
-		for x := 0; x < wanted_width; x++ {
-			r, g, b, _ := resized.At(x, y).RGBA()
-			bb[(y*wanted_width+x)*3+0] = byte(float64(int(b)-qp.ZeroPoint) * qp.Scale)
-			bb[(y*wanted_width+x)*3+1] = byte(float64(int(g)-qp.ZeroPoint) * qp.Scale)
-			bb[(y*wanted_width+x)*3+2] = byte(float64(int(r)-qp.ZeroPoint) * qp.Scale)
+	// Start up the background capture
+	resultChan := make(chan *ssdResult, 1)
+	go detect(ctx, &wg, resultChan, interpreter, wanted_width, wanted_height, wanted_channels, cam)
+
+	sc := make(chan os.Signal, 1)
+	defer close(sc)
+	signal.Notify(sc, os.Interrupt)
+	go func() {
+		<-sc
+		cancel()
+	}()
+
+	// Some local vars to calculate frame rate
+	var (
+		frames = 0
+		second = time.Tick(time.Second)
+	)
+
+	for {
+		// Run inference if we have a new frame to read
+		result, ok := <-resultChan
+		if !ok {
+			break
+		}
+
+		classes := make([]ssdClass, 0, len(result.clazz))
+		var i int
+		for i = 0; i < len(result.clazz); i++ {
+			idx := int(result.clazz[i] + 1)
+			score := float64(result.score[i])
+			if score < 0.6 {
+				continue
+			}
+			classes = append(classes, ssdClass{loc: result.loc[i], score: score, index: idx})
+		}
+		sort.Slice(classes, func(i, j int) bool {
+			return classes[i].score > classes[j].score
+		})
+		if len(classes) > 5 {
+			classes = classes[:5]
+		}
+
+		size := result.mat.Size()
+		for i, class := range classes {
+			label := "unknown"
+			if class.index < len(labels) {
+				label = labels[class.index]
+			}
+			c := colornames.Map[colornames.Names[class.index%len(colornames.Names)]]
+			gocv.Rectangle(&result.mat, image.Rect(
+				int(float32(size[1])*class.loc[1]),
+				int(float32(size[0])*class.loc[0]),
+				int(float32(size[1])*class.loc[3]),
+				int(float32(size[0])*class.loc[2]),
+			), c, 2)
+			text := fmt.Sprintf("%d %.5f %s\n", i, class.score, label)
+			gocv.PutText(&result.mat, text, image.Pt(
+				int(float32(size[1])*class.loc[1]),
+				int(float32(size[0])*class.loc[0]),
+			), gocv.FontHersheyPlain, 1.2, c, 2)
+		}
+
+		window.IMShow(result.mat)
+		result.mat.Close()
+
+		k := window.WaitKey(10)
+		if k == 'q' {
+			break
+		}
+		if window.GetWindowProperty(gocv.WindowPropertyVisible) == 0 {
+			break
+		}
+
+		// calculate frame rate
+		frames++
+		select {
+		case <-second:
+			window.SetWindowTitle(fmt.Sprintf("SSD | FPS: %d", frames))
+			frames = 0
+		default:
 		}
 	}
-	copy(input.UInt8s(), bb)
 
-	status = interpreter.Invoke()
-	if status != tflite.OK {
-		log.Println("invoke failed")
-		return
-	}
-
-	output := interpreter.GetOutputTensor(0)
-
-	var loc [10][4]float32
-	var clazz [10]float32
-	var score [10]float32
-	var nums [1]float32
-	output.CopyToBuffer(&loc[0])
-	interpreter.GetOutputTensor(1).CopyToBuffer(&clazz[0])
-	interpreter.GetOutputTensor(2).CopyToBuffer(&score[0])
-	interpreter.GetOutputTensor(3).CopyToBuffer(&nums[0])
-	num := int(nums[0])
-
-	canvas := image.NewRGBA(img.Bounds())
-	gc := draw2dimg.NewGraphicContext(canvas)
-	draw2d.SetFontFolder("C:/Windows/fonts")
-	draw2d.SetFontNamer(func(fontData draw2d.FontData) string {
-		return "MSGothic.ttc"
-	})
-	gc.DrawImage(img)
-
-	classes := make([]ssdClass, 0, len(clazz))
-	var i int
-	for i = 0; i < num; i++ {
-		idx := int(clazz[i] + 1)
-		score := float64(score[i])
-		if score < 0.5 {
-			continue
-		}
-		if loc[i][2]-loc[i][0] > 0.8 || loc[i][3]-loc[i][1] > 0.6 {
-			continue
-		}
-		if loc[i][2]-loc[i][0] < 0.1 || loc[i][3]-loc[i][1] < 0.1 {
-			continue
-		}
-		classes = append(classes, ssdClass{loc: loc[i], score: score, index: idx})
-	}
-	sort.Slice(classes, func(i, j int) bool {
-		return classes[i].score > classes[j].score
-	})
-
-	if len(classes) > 5 {
-		classes = classes[:5]
-	}
-	size := img.Bounds()
-	for i, class := range classes {
-		label := "unknown"
-		if class.index < len(labels) {
-			label = labels[class.index]
-		}
-		gc.BeginPath()
-		gc.SetStrokeColor(colornames.Map[colornames.Names[class.index]])
-		gc.SetLineWidth(1)
-		gc.MoveTo(float64(size.Dx())*float64(class.loc[1]), float64(size.Dy())*float64(class.loc[0]))
-		gc.LineTo(float64(size.Dx())*float64(class.loc[3]), float64(size.Dy())*float64(class.loc[0]))
-		gc.LineTo(float64(size.Dx())*float64(class.loc[3]), float64(size.Dy())*float64(class.loc[2]))
-		gc.LineTo(float64(size.Dx())*float64(class.loc[1]), float64(size.Dy())*float64(class.loc[2]))
-		gc.Close()
-		gc.Stroke()
-		s := fmt.Sprintf("%d %.5f %s\n", i, class.score, label)
-		log.Println(s)
-		gc.StrokeStringAt(s, float64(size.Dx())*float64(class.loc[1]), float64(size.Dy())*float64(class.loc[0]))
-	}
-	draw2dimg.SaveToPngFile(*outputPath, canvas)
+	cancel()
+	wg.Wait()
 }

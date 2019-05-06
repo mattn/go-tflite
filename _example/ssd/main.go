@@ -88,8 +88,7 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 
 		resized := gocv.NewMat()
 		gocv.Resize(frame, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
-		fb := resized.DataPtrUint8()
-		copy(input.UInt8s(), fb)
+		copy(input.UInt8s(), resized.DataPtrUint8())
 		resized.Close()
 		status := interpreter.Invoke()
 		if status != tflite.OK {
@@ -97,26 +96,21 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 			return
 		}
 
-		output := interpreter.GetOutputTensor(0)
-		if output.Type() == tflite.Float32 {
-			if interpreter.GetOutputTensorCount() == 4 {
-				var loc [10][4]float32
-				var clazz [10]float32
-				var score [10]float32
-				var nums [1]float32
-				output.CopyToBuffer(&loc[0])
-				interpreter.GetOutputTensor(1).CopyToBuffer(&clazz[0])
-				interpreter.GetOutputTensor(2).CopyToBuffer(&score[0])
-				interpreter.GetOutputTensor(3).CopyToBuffer(&nums[0])
-				num := int(nums[0])
+		var loc [10][4]float32
+		var clazz [10]float32
+		var score [10]float32
+		var nums [1]float32
+		interpreter.GetOutputTensor(0).CopyToBuffer(&loc[0])
+		interpreter.GetOutputTensor(1).CopyToBuffer(&clazz[0])
+		interpreter.GetOutputTensor(2).CopyToBuffer(&score[0])
+		interpreter.GetOutputTensor(3).CopyToBuffer(&nums[0])
+		num := int(nums[0])
 
-				resultChan <- &ssdResult{
-					loc:   loc[:num],
-					clazz: clazz[:num],
-					score: score[:num],
-					mat:   frame,
-				}
-			}
+		resultChan <- &ssdResult{
+			loc:   loc[:num],
+			clazz: clazz[:num],
+			score: score[:num],
+			mat:   frame,
 		}
 	}
 }
@@ -223,18 +217,18 @@ func main() {
 				int(float32(size[1])*class.loc[3]),
 				int(float32(size[0])*class.loc[2]),
 			), c, 2)
-			text := fmt.Sprintf("%d %.5f %s\n", i, class.score, label)
+			text := fmt.Sprintf("%d %.5f %s", i, class.score, label)
 			gocv.PutText(&result.mat, text, image.Pt(
 				int(float32(size[1])*class.loc[1]),
 				int(float32(size[0])*class.loc[0]),
-			), gocv.FontHersheyPlain, 1.2, c, 2)
+			), gocv.FontHersheySimplex, 1.2, c, 1)
 		}
 
 		window.IMShow(result.mat)
 		result.mat.Close()
 
 		k := window.WaitKey(10)
-		if k == 'q' {
+		if k == 0x1b {
 			break
 		}
 		if window.GetWindowProperty(gocv.WindowPropertyVisible) == 0 {

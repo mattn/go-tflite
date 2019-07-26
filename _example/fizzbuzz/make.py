@@ -4,7 +4,6 @@ from tensorflow.contrib.keras.api.keras.layers import Dense, Dropout, Activation
 from tensorflow.contrib.keras.api.keras.optimizers import SGD, Adam
 import tensorflow.contrib.lite as lite
 
-
 def fizzbuzz(i):
     if   i % 15 == 0: return np.array([0, 0, 0, 1])
     elif i % 5  == 0: return np.array([0, 0, 1, 0])

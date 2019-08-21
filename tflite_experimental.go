@@ -94,7 +94,7 @@ import (
 const sizeof_int32_t = 4
 
 func (i *Interpreter) ResetVariableTensors() Status {
-	return Status(C.TFL_InterpreterResetVariableTensors(i.i))
+	return Status(C.TfLiteInterpreterResetVariableTensors(i.i))
 }
 
 /*
@@ -105,7 +105,7 @@ func (o *InterpreterOptions) AddCustomOp(name string, reg *Registration, minVers
 	ptr := C.CString(name)
 	defer C.free(unsafe.Pointer(ptr))
 	r := C._make_registration()
-	C.TFL_InterpreterOptionsAddCustomOp(o.o, ptr, r, C.int(minVersion), C.int(maxVersion))
+	C.TfLiteInterpreterOptionsAddCustomOp(o.o, ptr, r, C.int(minVersion), C.int(maxVersion))
 }
 
 type registration struct {
@@ -295,7 +295,7 @@ func (o *InterpreterOptions) ExpAddBuiltinOp(op BuiltinOperator, reg *ExpRegistr
 		reg.Invoke,
 		reg.ProfilingString,
 	)
-	C.TFL_InterpreterOptionsAddBuiltinOp(o.o, C.TfLiteBuiltinOperator(op), r, C.int(minVersion), C.int(maxVersion))
+	C.TfLiteInterpreterOptionsAddBuiltinOp(o.o, C.TfLiteBuiltinOperator(op), r, C.int(minVersion), C.int(maxVersion))
 }
 
 // ExpAddCustomOp add custom op specified by name and registration. Current implementation is work in progress.
@@ -309,7 +309,7 @@ func (o *InterpreterOptions) ExpAddCustomOp(name string, reg *ExpRegistration, m
 		reg.Invoke,
 		reg.ProfilingString,
 	)
-	C.TFL_InterpreterOptionsAddCustomOp(o.o, ptr, r, C.int(minVersion), C.int(maxVersion))
+	C.TfLiteInterpreterOptionsAddCustomOp(o.o, ptr, r, C.int(minVersion), C.int(maxVersion))
 }
 
 // DynamicBuffer is buffer hold multiple strings.

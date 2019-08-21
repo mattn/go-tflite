@@ -18,7 +18,7 @@ _error_reporter(void *user_data, const char* format, va_list args) {
 }
 
 static void
-_TFL_InterpreterOptionsSetErrorReporter(TFL_InterpreterOptions* options, void* user_data) {
-  TFL_InterpreterOptionsSetErrorReporter(options, _error_reporter, user_data);
+_TfLiteInterpreterOptionsSetErrorReporter(TfLiteInterpreterOptions* options, void* user_data) {
+  TfLiteInterpreterOptionsSetErrorReporter(options, _error_reporter, user_data);
 }
 #endif

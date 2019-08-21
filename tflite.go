@@ -19,12 +19,12 @@ import (
 //go:generate stringer -type TensorType,Status -output type_string.go .
 
 type Model struct {
-	m *C.TFL_Model
+	m *C.TfLiteModel
 }
 
 // NewModel create new Model from buffer.
 func NewModel(model_data []byte) *Model {
-	m := C.TFL_NewModel(unsafe.Pointer(&model_data[0]), C.size_t(len(model_data)))
+	m := C.TfLiteModelCreate(unsafe.Pointer(&model_data[0]), C.size_t(len(model_data)))
 	if m == nil {
 		return nil
 	}
@@ -36,7 +36,7 @@ func NewModelFromFile(model_path string) *Model {
 	ptr := C.CString(model_path)
 	defer C.free(unsafe.Pointer(ptr))
 
-	m := C.TFL_NewModelFromFile(ptr)
+	m := C.TfLiteModelCreateFromFile(ptr)
 	if m == nil {
 		return nil
 	}
@@ -45,17 +45,17 @@ func NewModelFromFile(model_path string) *Model {
 
 // Delete delete instance of model.
 func (m *Model) Delete() {
-	C.TFL_DeleteModel(m.m)
+	C.TfLiteModelDelete(m.m)
 }
 
-// InterpreterOptions implement TFL_InterpreterOptions.
+// InterpreterOptions implement TfLiteInterpreterOptions.
 type InterpreterOptions struct {
-	o *C.TFL_InterpreterOptions
+	o *C.TfLiteInterpreterOptions
 }
 
 // NewInterpreterOptions create new InterpreterOptions.
 func NewInterpreterOptions() *InterpreterOptions {
-	o := C.TFL_NewInterpreterOptions()
+	o := C.TfLiteInterpreterOptionsCreate()
 	if o == nil {
 		return nil
 	}
@@ -64,12 +64,12 @@ func NewInterpreterOptions() *InterpreterOptions {
 
 // SetNumThread set number of threads.
 func (o *InterpreterOptions) SetNumThread(num_threads int) {
-	C.TFL_InterpreterOptionsSetNumThreads(o.o, C.int32_t(num_threads))
+	C.TfLiteInterpreterOptionsSetNumThreads(o.o, C.int32_t(num_threads))
 }
 
 // SetErrorRepoter set a function of reporter.
 func (o *InterpreterOptions) SetErrorReporter(f func(string, interface{}), user_data interface{}) {
-	C._TFL_InterpreterOptionsSetErrorReporter(o.o, pointer.Save(&callbackInfo{
+	C._TfLiteInterpreterOptionsSetErrorReporter(o.o, pointer.Save(&callbackInfo{
 		user_data: user_data,
 		f:         f,
 	}))
@@ -77,21 +77,21 @@ func (o *InterpreterOptions) SetErrorReporter(f func(string, interface{}), user_
 
 // Delete delete instance of InterpreterOptions.
 func (o *InterpreterOptions) Delete() {
-	C.TFL_DeleteInterpreterOptions(o.o)
+	C.TfLiteInterpreterOptionsDelete(o.o)
 }
 
-// Interpreter implement TFL_Interpreter.
+// Interpreter implement TfLiteInterpreter.
 type Interpreter struct {
-	i *C.TFL_Interpreter
+	i *C.TfLiteInterpreter
 }
 
 // NewInterpreter create new Interpreter.
 func NewInterpreter(model *Model, options *InterpreterOptions) *Interpreter {
-	var o *C.TFL_InterpreterOptions
+	var o *C.TfLiteInterpreterOptions
 	if options != nil {
 		o = options.o
 	}
-	i := C.TFL_NewInterpreter(model.m, o)
+	i := C.TfLiteInterpreterCreate(model.m, o)
 	if i == nil {
 		return nil
 	}
@@ -100,29 +100,29 @@ func NewInterpreter(model *Model, options *InterpreterOptions) *Interpreter {
 
 // Delete delete instance of Interpreter.
 func (i *Interpreter) Delete() {
-	C.TFL_DeleteInterpreter(i.i)
+	C.TfLiteInterpreterDelete(i.i)
 }
 
-// Tensor implement TFL_Tensor.
+// Tensor implement TfLiteTensor.
 type Tensor struct {
-	t *C.TFL_Tensor
+	t *C.TfLiteTensor
 }
 
 // GetInputTensorCount return number of input tensors.
 func (i *Interpreter) GetInputTensorCount() int {
-	return int(C.TFL_InterpreterGetInputTensorCount(i.i))
+	return int(C.TfLiteInterpreterGetInputTensorCount(i.i))
 }
 
 // GetInputTensor return input tensor specified by index.
 func (i *Interpreter) GetInputTensor(index int) *Tensor {
-	t := C.TFL_InterpreterGetInputTensor(i.i, C.int32_t(index))
+	t := C.TfLiteInterpreterGetInputTensor(i.i, C.int32_t(index))
 	if t == nil {
 		return nil
 	}
 	return &Tensor{t: t}
 }
 
-// State implement TFL_Status.
+// State implement TfLiteStatus.
 type Status int
 
 const (
@@ -132,30 +132,30 @@ const (
 
 // ResizeInputTensor resize the tensor specified by index with dims.
 func (i *Interpreter) ResizeInputTensor(index int, dims []int) Status {
-	s := C.TFL_InterpreterResizeInputTensor(i.i, C.int32_t(index), (*C.int)(unsafe.Pointer(&dims[0])), C.int32_t(len(dims)))
+	s := C.TfLiteInterpreterResizeInputTensor(i.i, C.int32_t(index), (*C.int)(unsafe.Pointer(&dims[0])), C.int32_t(len(dims)))
 	return Status(s)
 }
 
 // AllocateTensor allocate tensors for the interpreter.
 func (i *Interpreter) AllocateTensors() Status {
-	s := C.TFL_InterpreterAllocateTensors(i.i)
+	s := C.TfLiteInterpreterAllocateTensors(i.i)
 	return Status(s)
 }
 
 // Invoke invoke the task.
 func (i *Interpreter) Invoke() Status {
-	s := C.TFL_InterpreterInvoke(i.i)
+	s := C.TfLiteInterpreterInvoke(i.i)
 	return Status(s)
 }
 
 // GetOutputTensorCount return number of output tensors.
 func (i *Interpreter) GetOutputTensorCount() int {
-	return int(C.TFL_InterpreterGetOutputTensorCount(i.i))
+	return int(C.TfLiteInterpreterGetOutputTensorCount(i.i))
 }
 
 // GetOutputTensor return output tensor specified by index.
 func (i *Interpreter) GetOutputTensor(index int) *Tensor {
-	t := C.TFL_InterpreterGetOutputTensor(i.i, C.int32_t(index))
+	t := C.TfLiteInterpreterGetOutputTensor(i.i, C.int32_t(index))
 	if t == nil {
 		return nil
 	}
@@ -180,35 +180,35 @@ const (
 
 // Type return TensorType.
 func (t *Tensor) Type() TensorType {
-	return TensorType(C.TFL_TensorType(t.t))
+	return TensorType(C.TfLiteTensorType(t.t))
 }
 
 // NumDims return number of dimensions.
 func (t *Tensor) NumDims() int {
-	return int(C.TFL_TensorNumDims(t.t))
+	return int(C.TfLiteTensorNumDims(t.t))
 }
 
 // Dim return dimension of the element specified by index.
 func (t *Tensor) Dim(index int) int {
-	return int(C.TFL_TensorDim(t.t, C.int32_t(index)))
+	return int(C.TfLiteTensorDim(t.t, C.int32_t(index)))
 }
 
 // ByteSize return byte size of the tensor.
 func (t *Tensor) ByteSize() uint {
-	return uint(C.TFL_TensorByteSize(t.t))
+	return uint(C.TfLiteTensorByteSize(t.t))
 }
 
 // Data return pointer of buffer.
 func (t *Tensor) Data() unsafe.Pointer {
-	return C.TFL_TensorData(t.t)
+	return C.TfLiteTensorData(t.t)
 }
 
 // Name return name of the tensor.
 func (t *Tensor) Name() string {
-	return C.GoString(C.TFL_TensorName(t.t))
+	return C.GoString(C.TfLiteTensorName(t.t))
 }
 
-// QuantizationParams implement TFL_QuantizationParams.
+// QuantizationParams implement TfLiteQuantizationParams.
 type QuantizationParams struct {
 	Scale     float64
 	ZeroPoint int
@@ -216,7 +216,7 @@ type QuantizationParams struct {
 
 // QuantizationParams return quantization parameters of the tensor.
 func (t *Tensor) QuantizationParams() QuantizationParams {
-	q := C.TFL_TensorQuantizationParams(t.t)
+	q := C.TfLiteTensorQuantizationParams(t.t)
 	return QuantizationParams{
 		Scale:     float64(q.scale),
 		ZeroPoint: int(q.zero_point),
@@ -225,10 +225,10 @@ func (t *Tensor) QuantizationParams() QuantizationParams {
 
 // CopyFromBuffer write buffer to the tensor.
 func (t *Tensor) CopyFromBuffer(b interface{}) Status {
-	return Status(C.TFL_TensorCopyFromBuffer(t.t, unsafe.Pointer(reflect.ValueOf(b).Pointer()), C.size_t(t.ByteSize())))
+	return Status(C.TfLiteTensorCopyFromBuffer(t.t, unsafe.Pointer(reflect.ValueOf(b).Pointer()), C.size_t(t.ByteSize())))
 }
 
 // CopyToBuffer write buffer from the tensor.
 func (t *Tensor) CopyToBuffer(b interface{}) Status {
-	return Status(C.TFL_TensorCopyToBuffer(t.t, unsafe.Pointer(reflect.ValueOf(b).Pointer()), C.size_t(t.ByteSize())))
+	return Status(C.TfLiteTensorCopyToBuffer(t.t, unsafe.Pointer(reflect.ValueOf(b).Pointer()), C.size_t(t.ByteSize())))
 }

@@ -17,7 +17,7 @@ func (t *Tensor) SetInt32s(v []int32) error {
 	if t.Type() != Int32 {
 		return ErrTypeMismatch
 	}
-	ptr := C.TFL_TensorData(t.t)
+	ptr := C.TfLiteTensorData(t.t)
 	if ptr == nil {
 		return ErrBadTensor
 	}
@@ -31,7 +31,7 @@ func (t *Tensor) Int32s() []int32 {
 	if t.Type() != Int32 {
 		return nil
 	}
-	ptr := C.TFL_TensorData(t.t)
+	ptr := C.TfLiteTensorData(t.t)
 	if ptr == nil {
 		return nil
 	}
@@ -43,7 +43,7 @@ func (t *Tensor) SetFloat32s(v []float32) error {
 	if t.Type() != Float32 {
 		return ErrTypeMismatch
 	}
-	ptr := C.TFL_TensorData(t.t)
+	ptr := C.TfLiteTensorData(t.t)
 	if ptr == nil {
 		return ErrBadTensor
 	}
@@ -57,7 +57,7 @@ func (t *Tensor) Float32s() []float32 {
 	if t.Type() != Float32 {
 		return nil
 	}
-	ptr := C.TFL_TensorData(t.t)
+	ptr := C.TfLiteTensorData(t.t)
 	if ptr == nil {
 		return nil
 	}
@@ -77,7 +77,7 @@ func (t *Tensor) SetUint8s(v []uint8) error {
 	if t.Type() != UInt8 {
 		return ErrTypeMismatch
 	}
-	ptr := C.TFL_TensorData(t.t)
+	ptr := C.TfLiteTensorData(t.t)
 	if ptr == nil {
 		return ErrBadTensor
 	}
@@ -91,7 +91,7 @@ func (t *Tensor) UInt8s() []uint8 {
 	if t.Type() != UInt8 {
 		return nil
 	}
-	ptr := C.TFL_TensorData(t.t)
+	ptr := C.TfLiteTensorData(t.t)
 	if ptr == nil {
 		return nil
 	}
@@ -103,7 +103,7 @@ func (t *Tensor) SetInt64s(v []int64) error {
 	if t.Type() != Int64 {
 		return ErrTypeMismatch
 	}
-	ptr := C.TFL_TensorData(t.t)
+	ptr := C.TfLiteTensorData(t.t)
 	if ptr == nil {
 		return ErrBadTensor
 	}
@@ -117,7 +117,7 @@ func (t *Tensor) Int64s() []int64 {
 	if t.Type() != Int64 {
 		return nil
 	}
-	ptr := C.TFL_TensorData(t.t)
+	ptr := C.TfLiteTensorData(t.t)
 	if ptr == nil {
 		return nil
 	}
@@ -129,7 +129,7 @@ func (t *Tensor) SetInt16s(v []int16) error {
 	if t.Type() != Int16 {
 		return ErrTypeMismatch
 	}
-	ptr := C.TFL_TensorData(t.t)
+	ptr := C.TfLiteTensorData(t.t)
 	if ptr == nil {
 		return ErrBadTensor
 	}
@@ -143,7 +143,7 @@ func (t *Tensor) Int16s() []int16 {
 	if t.Type() != Int16 {
 		return nil
 	}
-	ptr := C.TFL_TensorData(t.t)
+	ptr := C.TfLiteTensorData(t.t)
 	if ptr == nil {
 		return nil
 	}
@@ -155,7 +155,7 @@ func (t *Tensor) SetInt8s(v []int8) error {
 	if t.Type() != Int8 {
 		return ErrTypeMismatch
 	}
-	ptr := C.TFL_TensorData(t.t)
+	ptr := C.TfLiteTensorData(t.t)
 	if ptr == nil {
 		return ErrBadTensor
 	}
@@ -169,7 +169,7 @@ func (t *Tensor) Int8s() []int8 {
 	if t.Type() != Int8 {
 		return nil
 	}
-	ptr := C.TFL_TensorData(t.t)
+	ptr := C.TfLiteTensorData(t.t)
 	if ptr == nil {
 		return nil
 	}

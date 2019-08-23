@@ -14,6 +14,7 @@ import (
 	"unsafe"
 
 	"github.com/mattn/go-pointer"
+	"github.com/mattn/go-tflite/delegates"
 )
 
 //go:generate stringer -type TensorType,Status -output type_string.go .
@@ -45,7 +46,9 @@ func NewModelFromFile(model_path string) *Model {
 
 // Delete delete instance of model.
 func (m *Model) Delete() {
-	C.TfLiteModelDelete(m.m)
+	if m != nil {
+		C.TfLiteModelDelete(m.m)
+	}
 }
 
 // InterpreterOptions implement TfLiteInterpreterOptions.
@@ -75,9 +78,15 @@ func (o *InterpreterOptions) SetErrorReporter(f func(string, interface{}), user_
 	}))
 }
 
+func (o *InterpreterOptions) AddDelegate(d delegates.Delegater) {
+	C.TfLiteInterpreterOptionsAddDelegate(o.o, (*C.TfLiteDelegate)(d.Ptr()))
+}
+
 // Delete delete instance of InterpreterOptions.
 func (o *InterpreterOptions) Delete() {
-	C.TfLiteInterpreterOptionsDelete(o.o)
+	if o != nil {
+		C.TfLiteInterpreterOptionsDelete(o.o)
+	}
 }
 
 // Interpreter implement TfLiteInterpreter.
@@ -100,7 +109,9 @@ func NewInterpreter(model *Model, options *InterpreterOptions) *Interpreter {
 
 // Delete delete instance of Interpreter.
 func (i *Interpreter) Delete() {
-	C.TfLiteInterpreterDelete(i.i)
+	if i != nil {
+		C.TfLiteInterpreterDelete(i.i)
+	}
 }
 
 // Tensor implement TfLiteTensor.
@@ -138,8 +149,11 @@ func (i *Interpreter) ResizeInputTensor(index int, dims []int) Status {
 
 // AllocateTensor allocate tensors for the interpreter.
 func (i *Interpreter) AllocateTensors() Status {
-	s := C.TfLiteInterpreterAllocateTensors(i.i)
-	return Status(s)
+	if i != nil {
+		s := C.TfLiteInterpreterAllocateTensors(i.i)
+		return Status(s)
+	}
+	return Error
 }
 
 // Invoke invoke the task.

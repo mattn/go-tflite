@@ -5,7 +5,7 @@ package cl
 #include "cl.go.h"
 #endif
 #cgo CFLAGS: -I${SRCDIR}/../../../../../tensorflow/tensorflow
-#cgo LDFLAGS: -L${SRCDIR}/../../../../../tensorflow/tensorflow/tensorflow/lite/experimental/c -ltensorflowlite_c -ltensorflowlite_c_gpu_cl
+#cgo LDFLAGS: -L${SRCDIR}/../../../../../tensorflow/tensorflow/tensorflow/lite/experimental/c -ltensorflowlite_c -ltensorflowlite_c_delegate_gpu
 #cgo linux LDFLAGS: -ldl -lrt
 */
 import "C"
@@ -51,7 +51,7 @@ func New(options *GpuDelegateOptions) delegates.Delegater {
 }
 
 func (g *GpuDelegate) Delete() {
-	C.TfLiteGpuDelegateDelete_New(nil)
+	C.TfLiteGpuDelegateDelete_New(g.d)
 }
 
 func (g *GpuDelegate) Ptr() unsafe.Pointer {

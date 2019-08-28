@@ -67,6 +67,11 @@ func (o *InterpreterOptions) SetNumThread(num_threads int) {
 	C.TfLiteInterpreterOptionsSetNumThreads(o.o, C.int32_t(num_threads))
 }
 
+// Add delegate to interpreter
+func (o *InterpreterOptions) AddDelegate(delegate Delegate) {
+	C.TfLiteInterpreterOptionsAddDelegate(o.o, delegate.d())
+}
+
 // SetErrorRepoter set a function of reporter.
 func (o *InterpreterOptions) SetErrorReporter(f func(string, interface{}), user_data interface{}) {
 	C._TfLiteInterpreterOptionsSetErrorReporter(o.o, pointer.Save(&callbackInfo{
@@ -78,6 +83,10 @@ func (o *InterpreterOptions) SetErrorReporter(f func(string, interface{}), user_
 // Delete delete instance of InterpreterOptions.
 func (o *InterpreterOptions) Delete() {
 	C.TfLiteInterpreterOptionsDelete(o.o)
+}
+
+type Delegate interface {
+	d() *C.TfLiteDelegate
 }
 
 // Interpreter implement TfLiteInterpreter.

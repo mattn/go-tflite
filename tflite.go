@@ -25,7 +25,7 @@ type Model struct {
 
 // NewModel create new Model from buffer.
 func NewModel(model_data []byte) *Model {
-	m := C.TfLiteModelCreate(unsafe.Pointer(&model_data[0]), C.size_t(len(model_data)))
+	m := C.TfLiteModelCreate(C.CBytes(model_data), C.size_t(len(model_data)))
 	if m == nil {
 		return nil
 	}

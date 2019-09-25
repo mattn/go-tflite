@@ -19,6 +19,7 @@ import (
 
 //go:generate stringer -type TensorType,Status -output type_string.go .
 
+// Model is TfLiteModel.
 type Model struct {
 	m *C.TfLiteModel
 }
@@ -32,7 +33,7 @@ func NewModel(model_data []byte) *Model {
 	return &Model{m: m}
 }
 
-// NewModel create new Model from file data.
+// NewModelFromFile create new Model from file data.
 func NewModelFromFile(model_path string) *Model {
 	ptr := C.CString(model_path)
 	defer C.free(unsafe.Pointer(ptr))

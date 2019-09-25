@@ -93,6 +93,7 @@ import (
 
 const sizeof_int32_t = 4
 
+// ResetVariableTensors resets variable tensors.
 func (i *Interpreter) ResetVariableTensors() Status {
 	return Status(C.TfLiteInterpreterResetVariableTensors(i.i))
 }
@@ -365,6 +366,7 @@ func (d *DynamicBuffer) WriteToTensorAsVector(t *Tensor) {
 	C.writeToTensorAsVector(t.t, (*C.char)(unsafe.Pointer(&b[0])), C.size_t(len(b)), C.int(len(d.offset)))
 }
 
+// GetString returns string in the string buffer.
 func (t *Tensor) GetString(index int) string {
 	if t.Type() != String {
 		return ""

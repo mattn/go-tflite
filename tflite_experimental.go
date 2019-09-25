@@ -157,6 +157,7 @@ func _tflite_registration_profiling_string(ccxt *C.TfLiteContext, node *C.TfLite
 }
 */
 
+// ExtRegistration indicate registration structure.
 type ExpRegistration struct {
 	Init            unsafe.Pointer
 	Free            unsafe.Pointer

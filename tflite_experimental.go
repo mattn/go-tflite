@@ -95,7 +95,7 @@ const sizeof_int32_t = 4
 
 // ResetVariableTensors resets variable tensors.
 func (i *Interpreter) ResetVariableTensors() Status {
-	return Status(C.TfLiteInterpreterResetVariableTensors(i.i))
+	return Status(C.TFL_InterpreterResetVariableTensors(i.i))
 }
 
 /*
@@ -297,7 +297,7 @@ func (o *InterpreterOptions) ExpAddBuiltinOp(op BuiltinOperator, reg *ExpRegistr
 		reg.Invoke,
 		reg.ProfilingString,
 	)
-	C.TfLiteInterpreterOptionsAddBuiltinOp(o.o, C.TfLiteBuiltinOperator(op), r, C.int(minVersion), C.int(maxVersion))
+	C.TFL_InterpreterOptionsAddBuiltinOp(o.o, C.TfLiteBuiltinOperator(op), r, C.int(minVersion), C.int(maxVersion))
 }
 
 // ExpAddCustomOp add custom op specified by name and registration. Current implementation is work in progress.
@@ -311,7 +311,7 @@ func (o *InterpreterOptions) ExpAddCustomOp(name string, reg *ExpRegistration, m
 		reg.Invoke,
 		reg.ProfilingString,
 	)
-	C.TfLiteInterpreterOptionsAddCustomOp(o.o, ptr, r, C.int(minVersion), C.int(maxVersion))
+	C.TFL_InterpreterOptionsAddCustomOp(o.o, ptr, r, C.int(minVersion), C.int(maxVersion))
 }
 
 // DynamicBuffer is buffer hold multiple strings.

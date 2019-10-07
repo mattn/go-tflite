@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <tensorflow/lite/experimental/c/c_api.h>
+#include <tensorflow/lite/experimental/c/c_api_experimental.h>
 
 extern void _go_error_reporter(void*, char*);
 
@@ -18,7 +19,7 @@ _error_reporter(void *user_data, const char* format, va_list args) {
 }
 
 static void
-_TfLiteInterpreterOptionsSetErrorReporter(TfLiteInterpreterOptions* options, void* user_data) {
-  TfLiteInterpreterOptionsSetErrorReporter(options, _error_reporter, user_data);
+_TFL_InterpreterOptionsSetErrorReporter(TFL_InterpreterOptions* options, void* user_data) {
+  TFL_InterpreterOptionsSetErrorReporter(options, _error_reporter, user_data);
 }
 #endif

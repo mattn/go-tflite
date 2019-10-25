@@ -65,8 +65,32 @@ Sorry, this has not been test for Linux or Mac
 
 Then run `go build` on some of the examples.
 
+## Edge TPU
+To be able to compile and use the EdgeTPU delegate, you need to install the libraries from here:
+https://github.com/google-coral/edgetpu
+
+There is also a deb package here:
+https://coral.withgoogle.com/docs/accelerator/get-started/#1-install-the-edge-tpu-runtime
+
+The libraries from should be installed in a system wide library path like `/usr/local/lib`
+The include files should be installed somewhere that is accesable from your CGO include path
+
+For x86:
+```
+cd /tmp && git clone https://github.com/google-coral/edgetpu.git && \
+cp edgetpu/libedgetpu/direct/k8/libedgetpu.so.1.0 /usr/local/lib/libedgetpu.so.1.0 && \
+ln -rs /usr/local/lib/libedgetpu.so.1.0 /usr/local/lib/libedgetpu.so.1 && \
+ln -rs /usr/local/lib/libedgetpu.so.1.0 /usr/local/lib/libedgetpu.so && \
+mkdir -p /usr/local/include/libedgetpu && \
+cp edgetpu/libedgetpu/edgetpu.h /usr/local/include/libedgetpu/edgetpu.h && \
+cp edgetpu/libedgetpu/edgetpu_c.h /usr/local/include/libedgetpu/edgetpu_c.h && \
+rm -Rf edgetpu
+```
+
+
 ## License
 MIT
 
 ## Author
 Yasuhrio Matsumoto (a.k.a. mattn)
+

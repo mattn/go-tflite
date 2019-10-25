@@ -1,0 +1,4 @@
+mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite
+labels.txt
+grace_hopper.jpg
+label_image_edgetpu

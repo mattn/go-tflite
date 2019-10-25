@@ -4,8 +4,7 @@ package tflite
 #ifndef GO_TFLITE_H
 #include "tflite.go.h"
 #endif
-#cgo CFLAGS: -I${SRCDIR}/../../tensorflow/tensorflow
-#cgo LDFLAGS: -L${SRCDIR}/../../tensorflow/tensorflow/tensorflow/lite/experimental/c -ltensorflowlite_c
+#cgo LDFLAGS: -ltensorflowlite_c
 #cgo linux LDFLAGS: -ldl -lrt
 */
 import "C"

@@ -148,6 +148,7 @@ func main() {
 
 	options := tflite.NewInterpreterOptions()
 	options.SetNumThread(4)
+	//options.AddDelegate(cl.New(nil))
 	defer options.Delete()
 
 	interpreter := tflite.NewInterpreter(model, options)

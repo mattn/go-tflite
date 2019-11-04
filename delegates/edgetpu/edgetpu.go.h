@@ -6,6 +6,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <tensorflow/lite/experimental/c/c_api.h>
-#include <libedgetpu/edgetpu_c.h>
+#include <edgetpu_c.h>
 
 #endif

@@ -3,7 +3,7 @@ package edgetpu
 /*
 #ifndef GO_EDGETPU_H
 #include "edgetpu.go.h"
-#include <libedgetpu/edgetpu_c.h>
+#include <edgetpu_c.h>
 #endif
 #cgo LDFLAGS: -ledgetpu
 */

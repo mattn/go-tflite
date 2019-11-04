@@ -71,6 +71,15 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 		qp.Scale = 1
 	}
 
+	var loc [1][20][4]float32
+	var clazz [1][20]float32
+	var score [1][20]float32
+	var nums [1]float32
+
+	output1 := interpreter.GetOutputTensor(0)
+	output2 := interpreter.GetOutputTensor(1)
+	output3 := interpreter.GetOutputTensor(2)
+	output4 := interpreter.GetOutputTensor(3)
 	for {
 		select {
 		case <-ctx.Done():
@@ -98,18 +107,11 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 			return
 		}
 
-		var loc [1][20][4]float32
-		var clazz [1][20]float32
-		var score [1][20]float32
-		var nums [1]float32
-		interpreter.GetOutputTensor(0).CopyToBuffer(&loc[0])
-		interpreter.GetOutputTensor(1).CopyToBuffer(&clazz[0])
-		interpreter.GetOutputTensor(2).CopyToBuffer(&score[0])
-		interpreter.GetOutputTensor(3).CopyToBuffer(&nums[0])
+		output1.CopyToBuffer(&loc[0])
+		output2.CopyToBuffer(&clazz[0])
+		output3.CopyToBuffer(&score[0])
+		output4.CopyToBuffer(&nums[0])
 		num := int(nums[0])
-		if num > 19 {
-			num = 19
-		}
 
 		resultChan <- &ssdResult{
 			loc:   loc[0][:num],

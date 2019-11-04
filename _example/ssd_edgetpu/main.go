@@ -23,8 +23,8 @@ import (
 
 var (
 	video     = flag.String("camera", "0", "video cature")
-	modelPath = flag.String("model", "mobilenet_ssd_v2_face_quant_postprocess_edgetpu.tflite", "path to model file")
-	labelPath = flag.String("label", "labelmap.txt", "path to label file")
+	modelPath = flag.String("model", "mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite", "path to model file")
+	labelPath = flag.String("label", "coco_labels.txt", "path to label file")
 	verbosity = flag.Int("verbosity", 0, "Edge TPU Verbosity")
 )
 
@@ -98,23 +98,23 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 			return
 		}
 
-		var loc [10][4]float32
-		var clazz [10]float32
-		var score [10]float32
+		var loc [1][20][4]float32
+		var clazz [1][20]float32
+		var score [1][20]float32
 		var nums [1]float32
 		interpreter.GetOutputTensor(0).CopyToBuffer(&loc[0])
 		interpreter.GetOutputTensor(1).CopyToBuffer(&clazz[0])
 		interpreter.GetOutputTensor(2).CopyToBuffer(&score[0])
 		interpreter.GetOutputTensor(3).CopyToBuffer(&nums[0])
 		num := int(nums[0])
-		if num > 9 {
-			num = 9
+		if num > 19 {
+			num = 19
 		}
 
 		resultChan <- &ssdResult{
-			loc:   loc[:num],
-			clazz: clazz[:num],
-			score: score[:num],
+			loc:   loc[0][:num],
+			clazz: clazz[0][:num],
+			score: score[0][:num],
 			mat:   frame,
 		}
 	}
@@ -220,12 +220,11 @@ func main() {
 		classes := make([]ssdClass, 0, len(result.clazz))
 		var i int
 		for i = 0; i < len(result.clazz); i++ {
-			idx := int(result.clazz[i] + 1)
 			score := float64(result.score[i])
 			if score < 0.6 {
 				continue
 			}
-			classes = append(classes, ssdClass{loc: result.loc[i], score: score, index: idx})
+			classes = append(classes, ssdClass{loc: result.loc[i], score: score, index: int(result.clazz[i])})
 		}
 		sort.Slice(classes, func(i, j int) bool {
 			return classes[i].score > classes[j].score

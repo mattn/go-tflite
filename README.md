@@ -82,8 +82,8 @@ cp edgetpu/libedgetpu/direct/k8/libedgetpu.so.1.0 /usr/local/lib/libedgetpu.so.1
 ln -rs /usr/local/lib/libedgetpu.so.1.0 /usr/local/lib/libedgetpu.so.1 && \
 ln -rs /usr/local/lib/libedgetpu.so.1.0 /usr/local/lib/libedgetpu.so && \
 mkdir -p /usr/local/include/libedgetpu && \
-cp edgetpu/libedgetpu/edgetpu.h /usr/local/include/libedgetpu/edgetpu.h && \
-cp edgetpu/libedgetpu/edgetpu_c.h /usr/local/include/libedgetpu/edgetpu_c.h && \
+cp edgetpu/libedgetpu/edgetpu.h /usr/local/include/edgetpu.h && \
+cp edgetpu/libedgetpu/edgetpu_c.h /usr/local/include/edgetpu_c.h && \
 rm -Rf edgetpu
 ```
 

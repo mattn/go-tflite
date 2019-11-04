@@ -28,8 +28,7 @@ void destroyDelegate(void *f, TfLiteDelegate *delegate) {
 	tflite_plugin_destroy_delegate((void*)delegate);
 }
 
-#cgo CFLAGS: -I${SRCDIR}/../../../../tensorflow/tensorflow
-#cgo LDFLAGS: -L${SRCDIR}/../../../../tensorflow/tensorflow/tensorflow/lite/experimental/c
+#cgo LDFLAGS: -L/tensorflow/lite/experimental/c
 #cgo LDFLAGS: -L/usr/local/lib/tensorflow/lite
 */
 import "C"

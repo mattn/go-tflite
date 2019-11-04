@@ -9,20 +9,18 @@ package ops
 #include <tensorflow/lite/experimental/c/c_api_experimental.h>
 #include <tensorflow/lite/context.h>
 #cgo windows CFLAGS: -D__LITTLE_ENDIAN__
-#cgo CFLAGS: -I${SRCDIR}/../../../tensorflow/tensorflow
-#cgo CFLAGS: -I${SRCDIR}/../../../tensorflow/tensorflow/tensorflow/lite/tools/make/downloads/flatbuffers/include
-#cgo CFLAGS: -I${SRCDIR}/../../../tensorflow/tensorflow/tensorflow/lite/tools/make/downloads/farmhash/src
-#cgo CFLAGS: -I${SRCDIR}/../../../tensorflow/tensorflow/tensorflow/lite/tools/make/downloads/absl
+#cgo CFLAGS: -I/tensorflow/lite/tools/make/downloads/flatbuffers/include
+#cgo CFLAGS: -I/tensorflow/lite/tools/make/downloads/farmhash/src
+#cgo CFLAGS: -I/tensorflow/lite/tools/make/downloads/absl
 #cgo windows CXXFLAGS: -D__LITTLE_ENDIAN__
 #cgo CXXFLAGS: -std=c++11
-#cgo CXXFLAGS: -I${SRCDIR}/../../../tensorflow/tensorflow
-#cgo CXXFLAGS: -I${SRCDIR}/../../../tensorflow/tensorflow/tensorflow/lite/tools/make/downloads/flatbuffers/include
-#cgo CXXFLAGS: -I${SRCDIR}/../../../tensorflow/tensorflow/tensorflow/lite/tools/make/downloads/farmhash/src
-#cgo CXXFLAGS: -I${SRCDIR}/../../../tensorflow/tensorflow/tensorflow/lite/tools/make/downloads/absl
-#cgo LDFLAGS: -L${SRCDIR}/../../../tensorflow/tensorflow/tensorflow/lite/experimental/c -lre2 -ltensorflow-lite
-#cgo windows amd64 LDFLAGS: -L${SRCDIR}/../../../tensorflow/tensorflow/tensorflow/lite/tools/make/gen/windows_x86_64/lib
-#cgo linux amd64 LDFLAGS: -L${SRCDIR}/../../../tensorflow/tensorflow/tensorflow/lite/tools/make/gen/linux_x86_64/lib
-#cgo linux arm32 LDFLAGS: -L${SRCDIR}/../../../tensorflow/tensorflow/tensorflow/lite/tools/make/gen/rpi_armv7l/lib
+#cgo CXXFLAGS: -I/tensorflow/lite/tools/make/downloads/flatbuffers/include
+#cgo CXXFLAGS: -I/tensorflow/lite/tools/make/downloads/farmhash/src
+#cgo CXXFLAGS: -I/tensorflow/lite/tools/make/downloads/absl
+#cgo LDFLAGS: -L/tensorflow/lite/experimental/c -lre2 -ltensorflow-lite
+#cgo windows amd64 LDFLAGS: -L/tensorflow/lite/tools/make/gen/windows_x86_64/lib
+#cgo linux amd64 LDFLAGS: -L/tensorflow/lite/tools/make/gen/linux_x86_64/lib
+#cgo linux arm32 LDFLAGS: -L/tensorflow/lite/tools/make/gen/rpi_armv7l/lib
 #cgo linux LDFLAGS: -ldl -lrt
 
 TfLiteRegistration* Register_ABS();

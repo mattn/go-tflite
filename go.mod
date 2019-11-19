@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f
+	github.com/disintegration/imaging v1.6.2
 	github.com/faiface/glhf v0.0.0-20181018222622-82a6317ac380 // indirect
 	github.com/faiface/mainthread v0.0.0-20171120011319-8b78f0a41ae3 // indirect
 	github.com/faiface/pixel v0.8.0

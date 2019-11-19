@@ -12,8 +12,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/disintegration/imaging"
 	"github.com/mattn/go-tflite"
-	"github.com/nfnt/resize"
 )
 
 func predict(img image.Image, mpredict string) ([]float32, error) {
@@ -34,7 +34,7 @@ func predict(img image.Image, mpredict string) ([]float32, error) {
 	wanted_width := input.Dim(2)
 	wanted_channel := input.Dim(3)
 
-	resized := resize.Resize(uint(wanted_width), uint(wanted_height), img, resize.NearestNeighbor)
+	resized := imaging.Resize(img, wanted_width, wanted_height, imaging.Linear)
 	bounds := resized.Bounds()
 	dx, dy := bounds.Dx(), bounds.Dy()
 
@@ -120,7 +120,7 @@ func main() {
 	wanted_width := input.Dim(2)
 	wanted_channel := input.Dim(3)
 
-	resized := resize.Resize(uint(wanted_width), uint(wanted_height), img, resize.NearestNeighbor)
+	resized := imaging.Resize(img, wanted_width, wanted_height, imaging.Linear)
 	bounds := resized.Bounds()
 	dx, dy := bounds.Dx(), bounds.Dy()
 
@@ -144,7 +144,7 @@ func main() {
 	dx = output.Dim(1)
 	dy = output.Dim(2)
 	wanted_channel = output.Dim(3)
-	canvas := image.NewRGBA(img.Bounds())
+	canvas := image.NewRGBA(image.Rect(0, 0, dx, dy))
 	for y := 0; y < dy; y++ {
 		for x := 0; x < dx; x++ {
 			r := out[(y*dx+x)*wanted_channel+0] * 65536
@@ -153,7 +153,7 @@ func main() {
 			canvas.Set(x, y, color.RGBA64{R: uint16(r), G: uint16(g), B: uint16(b), A: 65535})
 		}
 	}
-	resized = resize.Resize(uint(origbounds.Dx()), uint(origbounds.Dy()), canvas, resize.NearestNeighbor)
+	resized = imaging.Resize(canvas, origbounds.Dx(), origbounds.Dy(), imaging.Lanczos)
 	f, err := os.Create(foutput)
 	if err != nil {
 		log.Fatal(err)

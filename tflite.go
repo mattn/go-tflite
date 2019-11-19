@@ -142,8 +142,8 @@ const (
 )
 
 // ResizeInputTensor resize the tensor specified by index with dims.
-func (i *Interpreter) ResizeInputTensor(index int, dims []int) Status {
-	s := C.TfLiteInterpreterResizeInputTensor(i.i, C.int32_t(index), (*C.int)(unsafe.Pointer(&dims[0])), C.int32_t(len(dims)))
+func (i *Interpreter) ResizeInputTensor(index int, dims []int32) Status {
+	s := C.TfLiteInterpreterResizeInputTensor(i.i, C.int32_t(index), (*C.int32_t)(unsafe.Pointer(&dims[0])), C.int32_t(len(dims)))
 	return Status(s)
 }
 

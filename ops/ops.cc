@@ -12,7 +12,9 @@ TfLiteRegistration* Register_LOGISTIC_REF();
 TfLiteRegistration* Register_AVERAGE_POOL_REF();
 TfLiteRegistration* Register_MAX_POOL_REF();
 TfLiteRegistration* Register_L2_POOL_REF();
+TfLiteRegistration* Register_CONV_2D();
 TfLiteRegistration* Register_CONVOLUTION_REF();
+TfLiteRegistration* Register_DEPTHWISE_CONV_2D();
 TfLiteRegistration* Register_DEPTHWISE_CONVOLUTION_REF();
 TfLiteRegistration* Register_SVDF();
 TfLiteRegistration* Register_RNN();
@@ -115,7 +117,9 @@ TfLiteRegistration* Register_LOGISTIC_REF() { return tflite::ops::builtin::Regis
 TfLiteRegistration* Register_AVERAGE_POOL_REF() { return tflite::ops::builtin::Register_AVERAGE_POOL_REF(); }
 TfLiteRegistration* Register_MAX_POOL_REF() { return tflite::ops::builtin::Register_MAX_POOL_REF(); }
 TfLiteRegistration* Register_L2_POOL_REF() { return tflite::ops::builtin::Register_L2_POOL_REF(); }
+TfLiteRegistration* Register_CONV_2D() { return tflite::ops::builtin::Register_CONV_2D(); }
 TfLiteRegistration* Register_CONVOLUTION_REF() { return tflite::ops::builtin::Register_CONVOLUTION_REF(); }
+TfLiteRegistration* Register_DEPTHWISE_CONV_2D() { return tflite::ops::builtin::Register_DEPTHWISE_CONV_2D(); }
 TfLiteRegistration* Register_DEPTHWISE_CONVOLUTION_REF() { return tflite::ops::builtin::Register_DEPTHWISE_CONVOLUTION_REF(); }
 TfLiteRegistration* Register_SVDF() { return tflite::ops::builtin::Register_SVDF(); }
 TfLiteRegistration* Register_RNN() { return tflite::ops::builtin::Register_RNN(); }

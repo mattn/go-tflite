@@ -17,7 +17,7 @@ package ops
 #cgo CXXFLAGS: -I/tensorflow/lite/tools/make/downloads/flatbuffers/include
 #cgo CXXFLAGS: -I/tensorflow/lite/tools/make/downloads/farmhash/src
 #cgo CXXFLAGS: -I/tensorflow/lite/tools/make/downloads/absl
-#cgo LDFLAGS: -L/tensorflow/lite/experimental/c -lre2 -ltensorflow-lite
+#cgo LDFLAGS: -L/tensorflow/lite/experimental/c -ltensorflow-lite
 #cgo windows amd64 LDFLAGS: -L/tensorflow/lite/tools/make/gen/windows_x86_64/lib
 #cgo linux amd64 LDFLAGS: -L/tensorflow/lite/tools/make/gen/linux_x86_64/lib
 #cgo linux arm32 LDFLAGS: -L/tensorflow/lite/tools/make/gen/rpi_armv7l/lib
@@ -32,7 +32,9 @@ TfLiteRegistration* Register_LOGISTIC_REF();
 TfLiteRegistration* Register_AVERAGE_POOL_REF();
 TfLiteRegistration* Register_MAX_POOL_REF();
 TfLiteRegistration* Register_L2_POOL_REF();
+TfLiteRegistration* Register_CONV_2D();
 TfLiteRegistration* Register_CONVOLUTION_REF();
+TfLiteRegistration* Register_DEPTHWISE_CONV_2D();
 TfLiteRegistration* Register_DEPTHWISE_CONVOLUTION_REF();
 TfLiteRegistration* Register_SVDF();
 TfLiteRegistration* Register_RNN();
@@ -140,16 +142,18 @@ func wrap(p *C.TfLiteRegistration) *tflite.ExpRegistration {
 	}
 }
 
-func Register_ABS() *tflite.ExpRegistration              { return wrap(C.Register_ABS()) }
-func Register_RELU() *tflite.ExpRegistration             { return wrap(C.Register_RELU()) }
-func Register_RELU_N1_TO_1() *tflite.ExpRegistration     { return wrap(C.Register_RELU_N1_TO_1()) }
-func Register_RELU6() *tflite.ExpRegistration            { return wrap(C.Register_RELU6()) }
-func Register_TANH_REF() *tflite.ExpRegistration         { return wrap(C.Register_TANH_REF()) }
-func Register_LOGISTIC_REF() *tflite.ExpRegistration     { return wrap(C.Register_LOGISTIC_REF()) }
-func Register_AVERAGE_POOL_REF() *tflite.ExpRegistration { return wrap(C.Register_AVERAGE_POOL_REF()) }
-func Register_MAX_POOL_REF() *tflite.ExpRegistration     { return wrap(C.Register_MAX_POOL_REF()) }
-func Register_L2_POOL_REF() *tflite.ExpRegistration      { return wrap(C.Register_L2_POOL_REF()) }
-func Register_CONVOLUTION_REF() *tflite.ExpRegistration  { return wrap(C.Register_CONVOLUTION_REF()) }
+func Register_ABS() *tflite.ExpRegistration               { return wrap(C.Register_ABS()) }
+func Register_RELU() *tflite.ExpRegistration              { return wrap(C.Register_RELU()) }
+func Register_RELU_N1_TO_1() *tflite.ExpRegistration      { return wrap(C.Register_RELU_N1_TO_1()) }
+func Register_RELU6() *tflite.ExpRegistration             { return wrap(C.Register_RELU6()) }
+func Register_TANH_REF() *tflite.ExpRegistration          { return wrap(C.Register_TANH_REF()) }
+func Register_LOGISTIC_REF() *tflite.ExpRegistration      { return wrap(C.Register_LOGISTIC_REF()) }
+func Register_AVERAGE_POOL_REF() *tflite.ExpRegistration  { return wrap(C.Register_AVERAGE_POOL_REF()) }
+func Register_MAX_POOL_REF() *tflite.ExpRegistration      { return wrap(C.Register_MAX_POOL_REF()) }
+func Register_L2_POOL_REF() *tflite.ExpRegistration       { return wrap(C.Register_L2_POOL_REF()) }
+func Register_CONV_2D() *tflite.ExpRegistration           { return wrap(C.Register_CONV_2D()) }
+func Register_CONVOLUTION_REF() *tflite.ExpRegistration   { return wrap(C.Register_CONVOLUTION_REF()) }
+func Register_DEPTHWISE_CONV_2D() *tflite.ExpRegistration { return wrap(C.Register_DEPTHWISE_CONV_2D()) }
 func Register_DEPTHWISE_CONVOLUTION_REF() *tflite.ExpRegistration {
 	return wrap(C.Register_DEPTHWISE_CONVOLUTION_REF())
 }

@@ -47,7 +47,7 @@ Or to just compile the tensorflow lite libraries:
 ```
 $ cd /some/path/tensorflow
 $ bazel build --config opt --config monolithic //tensorflow/lite:libtensorflowlite.so
-$ bazel build --config opt --config monolithic //tensorflow/lite/experimental/c:libtensorflowlite_c.so
+$ bazel build --config opt --config monolithic //tensorflow/lite/c:libtensorflowlite_c.so
 ```
 
 In order for go to find the headers you must set the CGO_CFLAGS environment variable for the source and libraries of tensorflow.
@@ -60,7 +60,7 @@ $ export CGO_LDFLAGS=-L/path/to/tensorflow/libaries
 ```
 
 If you don't love bazel, you can try `Makefile.tflite`. 
-Put this file as `Makefile` in `tensorflow/lite/experimental/c`, and run `make`. 
+Put this file as `Makefile` in `tensorflow/lite/c`, and run `make`. 
 Sorry, this has not been test for Linux or Mac
 
 Then run `go build` on some of the examples.

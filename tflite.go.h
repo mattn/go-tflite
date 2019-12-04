@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <tensorflow/lite/experimental/c/c_api.h>
+#include <tensorflow/lite/c/c_api.h>
 
 extern void _go_error_reporter(void*, char*);
 

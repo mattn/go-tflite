@@ -5,8 +5,8 @@ package ops
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <tensorflow/lite/experimental/c/c_api.h>
-#include <tensorflow/lite/experimental/c/c_api_experimental.h>
+#include <tensorflow/lite/c/c_api.h>
+#include <tensorflow/lite/c/c_api_experimental.h>
 #include <tensorflow/lite/context.h>
 #cgo windows CFLAGS: -D__LITTLE_ENDIAN__
 #cgo CFLAGS: -I/tensorflow/lite/tools/make/downloads/flatbuffers/include
@@ -17,7 +17,7 @@ package ops
 #cgo CXXFLAGS: -I/tensorflow/lite/tools/make/downloads/flatbuffers/include
 #cgo CXXFLAGS: -I/tensorflow/lite/tools/make/downloads/farmhash/src
 #cgo CXXFLAGS: -I/tensorflow/lite/tools/make/downloads/absl
-#cgo LDFLAGS: -L/tensorflow/lite/experimental/c -ltensorflow-lite
+#cgo LDFLAGS: -L/tensorflow/lite/c -ltensorflow-lite
 #cgo windows amd64 LDFLAGS: -L/tensorflow/lite/tools/make/gen/windows_x86_64/lib
 #cgo linux amd64 LDFLAGS: -L/tensorflow/lite/tools/make/gen/linux_x86_64/lib
 #cgo linux arm32 LDFLAGS: -L/tensorflow/lite/tools/make/gen/rpi_armv7l/lib

@@ -1,4 +1,4 @@
-#include <tensorflow/lite/experimental/c/c_api.h>
+#include <tensorflow/lite/c/c_api.h>
 #include <tensorflow/lite/context.h>
 #include <tensorflow/lite/kernels/kernel_util.h>
 #include <tensorflow/lite/string_util.h>

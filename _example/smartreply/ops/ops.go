@@ -5,8 +5,8 @@ package ops
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <tensorflow/lite/experimental/c/c_api.h>
-#include <tensorflow/lite/experimental/c/c_api_experimental.h>
+#include <tensorflow/lite/c/c_api.h>
+#include <tensorflow/lite/c/c_api_experimental.h>
 #include <tensorflow/lite/context.h>
 #cgo windows CFLAGS: -D__LITTLE_ENDIAN__
 #cgo CFLAGS: -I${SRCDIR}/../../../../../tensorflow/tensorflow
@@ -19,8 +19,8 @@ package ops
 #cgo CXXFLAGS: -I${SRCDIR}/../../../../../tensorflow/tensorflow/tensorflow/lite/tools/make/downloads/flatbuffers/include
 #cgo CXXFLAGS: -I${SRCDIR}/../../../../../tensorflow/tensorflow/tensorflow/lite/tools/make/downloads/farmhash/src
 #cgo CXXFLAGS: -I${SRCDIR}/../../../../../tensorflow/tensorflow/tensorflow/lite/tools/make/downloads/absl
-#cgo LDFLAGS: -L${SRCDIR}/../../../../../tensorflow/tensorflow/tensorflow/lite/experimental/c -lre2 -ltensorflow-lite
-#cgo LDFLAGS: -L${SRCDIR}/../../../../../tensorflow/tensorflow/tensorflow/lite/experimental/c -ltensorflowlite_c
+#cgo LDFLAGS: -L${SRCDIR}/../../../../../tensorflow/tensorflow/tensorflow/lite/c -lre2 -ltensorflow-lite
+#cgo LDFLAGS: -L${SRCDIR}/../../../../../tensorflow/tensorflow/tensorflow/lite/c -ltensorflowlite_c
 #cgo windows amd64 LDFLAGS: -L${SRCDIR}/../../../../../tensorflow/tensorflow/tensorflow/lite/tools/make/gen/windows_x86_64/lib
 #cgo linux amd64 LDFLAGS: -L${SRCDIR}/../../../../../tensorflow/tensorflow/tensorflow/lite/tools/make/gen/linux_x86_64/lib
 #cgo linux arm32 LDFLAGS: -L${SRCDIR}/../../../../../tensorflow/tensorflow/tensorflow/lite/tools/make/gen/rpi_armv7l/lib

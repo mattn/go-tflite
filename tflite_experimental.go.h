@@ -6,5 +6,5 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-#include <tensorflow/lite/experimental/c/c_api_experimental.h>
+#include <tensorflow/lite/c/c_api_experimental.h>
 #endif

@@ -1,5 +1,7 @@
 package edgetpu
 
+// +build !windows
+
 /*
 #ifndef GO_EDGETPU_H
 #include "edgetpu.go.h"

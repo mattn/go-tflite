@@ -14,6 +14,7 @@ require (
 	github.com/mattn/go-pointer v0.0.0-20190911064623-a0a44394634f
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/pkg/errors v0.8.1 // indirect
+	github.com/rakyll/statik v0.1.6
 	gocv.io/x/gocv v0.21.0
 	golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8
 )

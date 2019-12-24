@@ -4,6 +4,7 @@ package tflite
 #ifndef GO_TFLITE_H
 #include "tflite.go.h"
 #endif
+#cgo LDFLAGS: -Wl,-unresolved-symbols=ignore-all
 */
 import "C"
 import "errors"

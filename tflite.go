@@ -4,8 +4,9 @@ package tflite
 #ifndef GO_TFLITE_H
 #include "tflite.go.h"
 #endif
-#cgo LDFLAGS: -ltensorflowlite_c
-#cgo linux LDFLAGS: -ldl -lrt
+#cgo LDFLAGS: -Ltensorflowlite_c
+#cgo LDFLAGS: -Wl,-unresolved-symbols=ignore-all
+#cgo linux LDFLAGS: -ldl
 */
 import "C"
 import (

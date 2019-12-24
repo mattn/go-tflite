@@ -1,5 +1,8 @@
 package tflite
 
+/*
+#cgo LDFLAGS: -Wl,-unresolved-symbols=ignore-all
+*/
 import "C"
 import (
 	"unsafe"

@@ -17,3 +17,4 @@ tmp
 #_example/webcam/mobilenet_quant_v1_224.tflite
 #_example/webcam/webcam.exe
 .ipynb_checkpoints
+*.DS_Store

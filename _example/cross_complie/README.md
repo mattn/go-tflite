@@ -18,3 +18,7 @@ The exported C methods ```Build()``` , ```Classify(void* p0, char* p1)``` and ``
 
 
 ### Tested on macOS 10.15.2 and Tensorflow Lite C libraries generated from tensorflow master on 17th January 2020.
+
+
+### Note
+Once accepted and merged you can remove ```replace github.com/mattn/go-tflite => ../../../go-tflite``` from go.mod and update the ```github.com/mattn/go-tflite``` version.

@@ -41,6 +41,6 @@ func (d *Delegate) Delete() {
 }
 
 // Return a pointer
-func (etpu *Delegate) Ptr() unsafe.Pointer {
-	return unsafe.Pointer(etpu.d)
+func (d *Delegate) Ptr() unsafe.Pointer {
+	return unsafe.Pointer(d.d)
 }

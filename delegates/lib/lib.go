@@ -76,11 +76,11 @@ func New(libraryPath string) delegates.Delegater {
 	return &LibDelegate{d: d, destroyFunc: destroyFunc, libHandle: h}
 }
 
-func (g *LibDelegate) Delete() {
-	C.destroyDelegate(g.destroyFunc, g.d)
-	g.libHandle.Close()
+func (d *LibDelegate) Delete() {
+	C.destroyDelegate(d.destroyFunc, d.d)
+	d.libHandle.Close()
 }
 
-func (g *LibDelegate) Ptr() unsafe.Pointer {
-	return unsafe.Pointer(g.d)
+func (d *LibDelegate) Ptr() unsafe.Pointer {
+	return unsafe.Pointer(d.d)
 }

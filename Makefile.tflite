@@ -5,13 +5,14 @@ SRCS = \
 OBJS = $(subst .cc,.o,$(subst .cxx,.o,$(subst .cpp,.o,$(SRCS))))
 
 TENSORFLOW_ROOT = $(shell go env GOPATH)/src/github.com/tensorflow/tensorflow
-CXXFLAGS = -fPIC -DTF_COMPILE_LIBRARY -I$(TENSORFLOW_ROOT) -I$(TENSORFLOW_ROOT)/tensorflow/lite/tools/make/downloads/flatbuffers/include
+CXXFLAGS = -DTF_COMPILE_LIBRARY -I$(TENSORFLOW_ROOT) \
+	-I$(TENSORFLOW_ROOT)/tensorflow/lite/tools/make/downloads/flatbuffers/include \
+	-I$(TENSORFLOW_ROOT)/tensorflow/lite/tools/make/downloads/absl
 TARGET = libtensorflowlite_c
 ifeq ($(OS),Windows_NT)
 OS_ARCH = windows_x86_64
 TARGET_SHARED := $(TARGET).dll
 else
-TARGET_SHARED := $(TARGET).so
 ifeq ($(shell uname -m),x86_64)
 OS_ARCH = linux_x86_64
 else
@@ -20,6 +21,7 @@ OS_ARCH = linux_armv6l
 else
 OS_ARCH = rpi_armv7l
 endif
+TARGET_SHARED := $(TARGET).so
 endif
 endif
 LDFLAGS += -L$(TENSORFLOW_ROOT)/tensorflow/lite/tools/make/gen/$(OS_ARCH)/lib

@@ -8,6 +8,7 @@ package edgetpu
 #include <edgetpu_c.h>
 #endif
 #cgo LDFLAGS: -ledgetpu
+
 */
 import "C"
 import (
@@ -62,14 +63,11 @@ func (d *Delegate) Ptr() unsafe.Pointer {
 
 // Version fetches the EdgeTPU runtime version information
 func Version() (string, error) {
-
 	version := C.edgetpu_version()
 	if version == nil {
 		return "", fmt.Errorf("could not get version")
 	}
-	defer C.free(unsafe.Pointer(version))
 	return C.GoString(version), nil
-
 }
 
 // Verbosity sets the edgetpu verbosity
@@ -79,7 +77,6 @@ func Verbosity(v int) {
 
 // DeviceList fetches a list of devices
 func DeviceList() ([]Device, error) {
-
 	// Fetch the list of devices
 	var numDevices C.size_t
 	cDevices := C.edgetpu_list_devices(&numDevices)

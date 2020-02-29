@@ -80,6 +80,7 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 	output2 := interpreter.GetOutputTensor(1)
 	output3 := interpreter.GetOutputTensor(2)
 	output4 := interpreter.GetOutputTensor(3)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -112,6 +113,9 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 		output3.CopyToBuffer(&score[0])
 		output4.CopyToBuffer(&nums[0])
 		num := int(nums[0])
+		if num > 20 {
+			num = 20
+		}
 
 		resultChan <- &ssdResult{
 			loc:   loc[0][:num],

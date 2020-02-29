@@ -24,7 +24,7 @@ type Delegate struct {
 
 func New(options DelegateOptions) delegates.Delegater {
 	var d *C.TfLiteDelegate
-	var coptions C.TfLiteXNNPackDelegateOptions
+	coptions := C.TfLiteXNNPackDelegateOptionsDefault()
 	coptions.num_threads = C.int32_t(options.NumThreads)
 	d = C.TfLiteXNNPackDelegateCreate(&coptions)
 	if d == nil {

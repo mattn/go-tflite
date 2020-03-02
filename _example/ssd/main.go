@@ -93,8 +93,19 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 		}
 
 		resized := gocv.NewMat()
-		gocv.Resize(frame, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
-		copy(input.UInt8s(), resized.DataPtrUint8())
+		if input.Type() == tflite.Float32 {
+			frame.ConvertTo(&resized, gocv.MatTypeCV32F)
+			gocv.Resize(resized, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
+			ff, err := resized.DataPtrFloat32()
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			copy(input.Float32s(), ff)
+		} else {
+			gocv.Resize(frame, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
+			copy(input.UInt8s(), resized.DataPtrUint8())
+		}
 		resized.Close()
 		status := interpreter.Invoke()
 		if status != tflite.OK {
@@ -231,7 +242,7 @@ func main() {
 		window.IMShow(result.mat)
 		result.mat.Close()
 
-		k := window.WaitKey(10)
+		k := window.WaitKey(1)
 		if k == 0x1b {
 			break
 		}

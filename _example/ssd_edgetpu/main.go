@@ -59,6 +59,12 @@ func loadLabels(filename string) ([]string, error) {
 	return labels, nil
 }
 
+func copySlice(f []float32) []float32 {
+	ff := make([]float32, len(f), len(f))
+	copy(ff, f)
+	return ff
+}
+
 func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResult, interpreter *tflite.Interpreter, wanted_width, wanted_height, wanted_channels int, cam *gocv.VideoCapture) {
 	defer wg.Done()
 	defer close(resultChan)
@@ -70,13 +76,6 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 	if qp.Scale == 0 {
 		qp.Scale = 1
 	}
-
-	var nums float32
-
-	output1 := interpreter.GetOutputTensor(0)
-	output2 := interpreter.GetOutputTensor(1)
-	output3 := interpreter.GetOutputTensor(2)
-	output4 := interpreter.GetOutputTensor(3)
 
 	for {
 		select {
@@ -96,14 +95,19 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 		}
 
 		resized := gocv.NewMat()
-		frame.ConvertTo(&resized, gocv.MatTypeCV32F)
-		gocv.Resize(resized, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
-		ff, err := resized.DataPtrFloat32()
-		if err != nil {
-			fmt.Println(err)
-			continue
+		if input.Type() == tflite.Float32 {
+			frame.ConvertTo(&resized, gocv.MatTypeCV32F)
+			gocv.Resize(resized, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
+			ff, err := resized.DataPtrFloat32()
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			copy(input.Float32s(), ff)
+		} else {
+			gocv.Resize(frame, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
+			copy(input.UInt8s(), resized.DataPtrUint8())
 		}
-		copy(input.Float32s(), ff)
 		resized.Close()
 		status := interpreter.Invoke()
 		if status != tflite.OK {
@@ -111,12 +115,10 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 			return
 		}
 
-		output4.CopyToBuffer(&nums)
-		num := int(nums)
 		resultChan <- &ssdResult{
-			loc:   append([]float32(nil), output1.Float32s()[:num*4]...),
-			clazz: append([]float32(nil), output2.Float32s()[:num]...),
-			score: append([]float32(nil), output3.Float32s()[:num]...),
+			loc:   copySlice(interpreter.GetOutputTensor(0).Float32s()),
+			clazz: copySlice(interpreter.GetOutputTensor(1).Float32s()),
+			score: copySlice(interpreter.GetOutputTensor(2).Float32s()),
 			mat:   frame,
 		}
 	}
@@ -223,7 +225,6 @@ func main() {
 		var i int
 		for i = 0; i < len(result.clazz); i++ {
 			score := float64(result.score[i])
-			println(score)
 			if score < 0.6 {
 				continue
 			}
@@ -259,7 +260,7 @@ func main() {
 		window.IMShow(result.mat)
 		result.mat.Close()
 
-		k := window.WaitKey(10)
+		k := window.WaitKey(1)
 		if k == 0x1b {
 			break
 		}

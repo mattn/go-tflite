@@ -242,7 +242,7 @@ func main() {
 		window.IMShow(result.mat)
 		result.mat.Close()
 
-		k := window.WaitKey(10)
+		k := window.WaitKey(1)
 		if k == 0x1b {
 			break
 		}

@@ -27,14 +27,14 @@ var (
 )
 
 type ssdResult struct {
-	loc   [][4]float32
+	loc   []float32
 	clazz []float32
 	score []float32
 	mat   gocv.Mat
 }
 
 type ssdClass struct {
-	loc   [4]float32
+	loc   []float32
 	score float64
 	index int
 }
@@ -55,6 +55,12 @@ func loadLabels(filename string) ([]string, error) {
 		labels = append(labels, scanner.Text())
 	}
 	return labels, nil
+}
+
+func copySlice(f []float32) []float32 {
+	ff := make([]float32, len(f), len(f))
+	copy(ff, f)
+	return ff
 }
 
 func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResult, interpreter *tflite.Interpreter, wanted_width, wanted_height, wanted_channels int, cam *gocv.VideoCapture) {
@@ -96,20 +102,10 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 			return
 		}
 
-		var loc [10][4]float32
-		var clazz [10]float32
-		var score [10]float32
-		var nums [1]float32
-		interpreter.GetOutputTensor(0).CopyToBuffer(&loc[0])
-		interpreter.GetOutputTensor(1).CopyToBuffer(&clazz[0])
-		interpreter.GetOutputTensor(2).CopyToBuffer(&score[0])
-		interpreter.GetOutputTensor(3).CopyToBuffer(&nums[0])
-		num := int(nums[0])
-
 		resultChan <- &ssdResult{
-			loc:   loc[:num],
-			clazz: clazz[:num],
-			score: score[:num],
+			loc:   copySlice(interpreter.GetOutputTensor(0).Float32s()),
+			clazz: copySlice(interpreter.GetOutputTensor(1).Float32s()),
+			score: copySlice(interpreter.GetOutputTensor(2).Float32s()),
 			mat:   frame,
 		}
 	}
@@ -203,7 +199,7 @@ func main() {
 			if score < 0.6 {
 				continue
 			}
-			classes = append(classes, ssdClass{loc: result.loc[i], score: score, index: idx})
+			classes = append(classes, ssdClass{loc: result.loc[i*4 : (i+1)*4], score: score, index: idx})
 		}
 		sort.Slice(classes, func(i, j int) bool {
 			return classes[i].score > classes[j].score

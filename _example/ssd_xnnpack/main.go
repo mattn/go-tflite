@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-tflite"
-	"github.com/mattn/go-tflite/delegates/edgetpu"
+	"github.com/mattn/go-tflite/delegates/xnnpack"
 
 	"gocv.io/x/gocv"
 	"golang.org/x/image/colornames"
@@ -23,9 +23,8 @@ import (
 
 var (
 	video     = flag.String("camera", "0", "video cature")
-	modelPath = flag.String("model", "mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite", "path to model file")
-	labelPath = flag.String("label", "coco_labels.txt", "path to label file")
-	verbosity = flag.Int("verbosity", 0, "Edge TPU Verbosity")
+	modelPath = flag.String("model", "detect.tflite", "path to model file")
+	labelPath = flag.String("label", "labelmap.txt", "path to label file")
 )
 
 type ssdResult struct {
@@ -59,6 +58,12 @@ func loadLabels(filename string) ([]string, error) {
 	return labels, nil
 }
 
+func copySlice(f []float32) []float32 {
+	ff := make([]float32, len(f), len(f))
+	copy(ff, f)
+	return ff
+}
+
 func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResult, interpreter *tflite.Interpreter, wanted_width, wanted_height, wanted_channels int, cam *gocv.VideoCapture) {
 	defer wg.Done()
 	defer close(resultChan)
@@ -70,13 +75,6 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 	if qp.Scale == 0 {
 		qp.Scale = 1
 	}
-
-	var nums float32
-
-	output1 := interpreter.GetOutputTensor(0)
-	output2 := interpreter.GetOutputTensor(1)
-	output3 := interpreter.GetOutputTensor(2)
-	output4 := interpreter.GetOutputTensor(3)
 
 	for {
 		select {
@@ -96,14 +94,19 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 		}
 
 		resized := gocv.NewMat()
-		frame.ConvertTo(&resized, gocv.MatTypeCV32F)
-		gocv.Resize(resized, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
-		ff, err := resized.DataPtrFloat32()
-		if err != nil {
-			fmt.Println(err)
-			continue
+		if input.Type() == tflite.Float32 {
+			frame.ConvertTo(&resized, gocv.MatTypeCV32F)
+			gocv.Resize(resized, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
+			ff, err := resized.DataPtrFloat32()
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			copy(input.Float32s(), ff)
+		} else {
+			gocv.Resize(frame, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
+			copy(input.UInt8s(), resized.DataPtrUint8())
 		}
-		copy(input.Float32s(), ff)
 		resized.Close()
 		status := interpreter.Invoke()
 		if status != tflite.OK {
@@ -111,12 +114,10 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 			return
 		}
 
-		output4.CopyToBuffer(&nums)
-		num := int(nums)
 		resultChan <- &ssdResult{
-			loc:   append([]float32(nil), output1.Float32s()[:num*4]...),
-			clazz: append([]float32(nil), output2.Float32s()[:num]...),
-			score: append([]float32(nil), output3.Float32s()[:num]...),
+			loc:   copySlice(interpreter.GetOutputTensor(0).Float32s()),
+			clazz: copySlice(interpreter.GetOutputTensor(1).Float32s()),
+			score: copySlice(interpreter.GetOutputTensor(2).Float32s()),
 			mat:   frame,
 		}
 	}
@@ -153,26 +154,9 @@ func main() {
 	}
 	defer model.Delete()
 
-	// Get the list of devices
-	devices, err := edgetpu.DeviceList()
-	if err != nil {
-		log.Fatalf("Could not get EdgeTPU devices: %v", err)
-	}
-	if len(devices) == 0 {
-		log.Fatal("No edge TPU devices found")
-	}
-
-	// Print the EdgeTPU version
-	edgetpuVersion, err := edgetpu.Version()
-	if err != nil {
-		log.Fatalf("Could not get EdgeTPU version: %v", err)
-	}
-	fmt.Printf("EdgeTPU Version: %s\n", edgetpuVersion)
-	edgetpu.Verbosity(*verbosity)
 	options := tflite.NewInterpreterOptions()
+	options.AddDelegate(xnnpack.New(xnnpack.DelegateOptions{NumThreads: 4}))
 	options.SetNumThread(4)
-	d := edgetpu.New(devices[0])
-	options.AddDelegate(d)
 	defer options.Delete()
 
 	interpreter := tflite.NewInterpreter(model, options)
@@ -220,14 +204,13 @@ func main() {
 		}
 
 		classes := make([]ssdClass, 0, len(result.clazz))
-		var i int
-		for i = 0; i < len(result.clazz); i++ {
+		for i := 0; i < len(result.clazz); i++ {
+			idx := int(result.clazz[i] + 1)
 			score := float64(result.score[i])
-			println(score)
 			if score < 0.6 {
 				continue
 			}
-			classes = append(classes, ssdClass{loc: result.loc[i*4 : i*4+4], score: score, index: int(result.clazz[i])})
+			classes = append(classes, ssdClass{loc: result.loc[i*4 : (i+1)*4], score: score, index: idx})
 		}
 		sort.Slice(classes, func(i, j int) bool {
 			return classes[i].score > classes[j].score

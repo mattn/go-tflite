@@ -32,7 +32,7 @@ func main() {
 	var model_path, label_path, image_path string
 	flag.StringVar(&model_path, "model", "mobilenet_quant_v1_224.tflite", "path to model file")
 	flag.StringVar(&label_path, "label", "labels.txt", "path to label file")
-	flag.StringVar(&image_path, "image", "grace_hopper.png", "path to image file")
+	flag.StringVar(&image_path, "image", "peacock.png", "path to image file")
 	flag.Parse()
 
 	f, err := os.Open(image_path)

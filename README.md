@@ -32,7 +32,7 @@ See `_example` for more examples
 
 ## Requirements
 
-* TensorFlow Lite - This release requires r1.15
+* TensorFlow Lite - This release requires 2.2.0-rc3
 
 ## Tensorflow Installation
 

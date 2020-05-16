@@ -54,12 +54,13 @@ func main() {
 
 	model := tflite.NewModelFromFile(model_path)
 	if model == nil {
-		log.Fatal("cannot load model")
+		log.Println("cannot load model")
+		return
 	}
 	defer model.Delete()
 
 	options := tflite.NewInterpreterOptions()
-	options.AddDelegate(xnnpack.New(xnnpack.DelegateOptions{NumThreads: 4}))
+	options.AddDelegate(xnnpack.New(xnnpack.DelegateOptions{NumThreads: 2}))
 	options.SetNumThread(4)
 	options.SetErrorReporter(func(msg string, user_data interface{}) {
 		fmt.Println(msg)
@@ -68,13 +69,15 @@ func main() {
 
 	interpreter := tflite.NewInterpreter(model, options)
 	if interpreter == nil {
-		log.Fatal("cannot create interpreter")
+		log.Println("cannot create interpreter")
+		return
 	}
 	defer interpreter.Delete()
 
 	status := interpreter.AllocateTensors()
 	if status != tflite.OK {
-		log.Fatal("allocate failed")
+		log.Println("allocate failed")
+		return
 	}
 
 	input := interpreter.GetInputTensor(0)
@@ -111,12 +114,14 @@ func main() {
 		}
 		copy(input.Float32s(), ff)
 	} else {
-		log.Fatal("is not wanted type")
+		log.Println("is not wanted type")
+		return
 	}
 
 	status = interpreter.Invoke()
 	if status != tflite.OK {
-		log.Fatal("invoke failed")
+		log.Println("invoke failed")
+		return
 	}
 
 	output := interpreter.GetOutputTensor(0)
@@ -140,7 +145,8 @@ func main() {
 		b := make([]byte, output_size)
 		status = output.CopyToBuffer(&b[0])
 		if status != tflite.OK {
-			log.Fatal("output failed")
+			log.Println("output failed")
+			return
 		}
 		for i := 0; i < output_size; i++ {
 			score := float64(b[i])

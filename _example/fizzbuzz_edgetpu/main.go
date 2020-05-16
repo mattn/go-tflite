@@ -12,7 +12,7 @@ import (
 func bin(n int, num_digits int) []uint8 {
 	f := make([]byte, num_digits)
 	for i := uint(0); i < uint(num_digits); i++ {
-		f[i] = uint8((n >> i) & 1) * 255
+		f[i] = uint8((n>>i)&1) * 255
 	}
 	return f[:]
 }
@@ -52,15 +52,18 @@ func main() {
 
 	devices, err := edgetpu.DeviceList()
 	if err != nil {
-		log.Fatalf("Could not get EdgeTPU devices: %v", err)
+		log.Printf("Could not get EdgeTPU devices: %v", err)
+		return
 	}
 	if len(devices) == 0 {
-		log.Fatal("No edge TPU devices found")
+		log.Println("No edge TPU devices found")
+		return
 	}
 
 	edgetpuVersion, err := edgetpu.Version()
 	if err != nil {
-		log.Fatalf("Could not get EdgeTPU version: %v", err)
+		log.Printf("Could not get EdgeTPU version: %v", err)
+		return
 	}
 	fmt.Printf("EdgeTPU Version: %s\n", edgetpuVersion)
 

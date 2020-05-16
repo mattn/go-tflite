@@ -66,13 +66,15 @@ func main() {
 
 	interpreter := tflite.NewInterpreter(model, options)
 	if interpreter == nil {
-		log.Fatal("cannot create interpreter")
+		log.Println("cannot create interpreter")
+		return
 	}
 	defer interpreter.Delete()
 
 	status := interpreter.AllocateTensors()
 	if status != tflite.OK {
-		log.Fatal("allocate failed")
+		log.Println("allocate failed")
+		return
 	}
 
 	input := interpreter.GetInputTensor(0)
@@ -98,12 +100,14 @@ func main() {
 		}
 		input.CopyFromBuffer(bb)
 	} else {
-		log.Fatal("is not wanted type")
+		log.Println("is not wanted type")
+		return
 	}
 
 	status = interpreter.Invoke()
 	if status != tflite.OK {
-		log.Fatal("invoke failed")
+		log.Println("invoke failed")
+		return
 	}
 
 	output := interpreter.GetOutputTensor(0)
@@ -115,7 +119,8 @@ func main() {
 	}
 	status = output.CopyToBuffer(&b[0])
 	if status != tflite.OK {
-		log.Fatal("output failed")
+		log.Println("output failed")
+		return
 	}
 	results := []result{}
 	for i := 0; i < output_size; i++ {

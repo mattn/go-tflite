@@ -37,7 +37,8 @@ func main() {
 
 	model := tflite.NewModelFromFile("mnist_model.tflite")
 	if model == nil {
-		log.Fatal("cannot load model")
+		log.Println("cannot load model")
+		return
 	}
 	defer model.Delete()
 
@@ -46,7 +47,8 @@ func main() {
 
 	status := interpreter.AllocateTensors()
 	if status != tflite.OK {
-		log.Fatal("allocate failed")
+		log.Println("allocate failed")
+		return
 	}
 
 	input := interpreter.GetInputTensor(0)
@@ -60,7 +62,8 @@ func main() {
 	}
 	status = interpreter.Invoke()
 	if status != tflite.OK {
-		log.Fatal("invoke failed")
+		log.Println("invoke failed")
+		return
 	}
 
 	output := interpreter.GetOutputTensor(0)

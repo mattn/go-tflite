@@ -56,27 +56,31 @@ func main() {
 
 	model := tflite.NewModelFromFile(model_path)
 	if model == nil {
-		log.Fatal("cannot load model")
+		log.Println("cannot load model")
+		return
 	}
 	defer model.Delete()
 
 	// Get the list of devices
 	devices, err := edgetpu.DeviceList()
 	if err != nil {
-		log.Fatalf("Could not get EdgeTPU devices: %v", err)
+		log.Printf("Could not get EdgeTPU devices: %v", err)
+		return
 	}
 	if len(devices) == 0 {
-		log.Fatal("No edge TPU devices found")
+		log.Println("no edge TPU devices found")
+		return
 	}
 
 	// Print the EdgeTPU version
 	edgetpuVersion, err := edgetpu.Version()
 	if err != nil {
-		log.Fatalf("Could not get EdgeTPU version: %v", err)
+		log.Printf("cannot get EdgeTPU version: %v", err)
+		return
 	}
 	fmt.Printf("EdgeTPU Version: %s\n", edgetpuVersion)
 	edgetpu.Verbosity(verbosity)
-	
+
 	options := tflite.NewInterpreterOptions()
 	options.SetNumThread(4)
 	options.SetErrorReporter(func(msg string, user_data interface{}) {
@@ -90,13 +94,15 @@ func main() {
 
 	interpreter := tflite.NewInterpreter(model, options)
 	if interpreter == nil {
-		log.Fatal("cannot create interpreter")
+		log.Println("cannot create interpreter")
+		return
 	}
 	defer interpreter.Delete()
 
 	status := interpreter.AllocateTensors()
 	if status != tflite.OK {
-		log.Fatal("allocate failed")
+		log.Println("allocate failed")
+		return
 	}
 
 	input := interpreter.GetInputTensor(0)
@@ -122,12 +128,14 @@ func main() {
 		}
 		input.CopyFromBuffer(bb)
 	} else {
-		log.Fatal("is not wanted type")
+		log.Println("is not wanted type")
+		return
 	}
 
 	status = interpreter.Invoke()
 	if status != tflite.OK {
-		log.Fatal("invoke failed")
+		log.Println("invoke failed")
+		return
 	}
 
 	output := interpreter.GetOutputTensor(0)
@@ -139,7 +147,8 @@ func main() {
 	}
 	status = output.CopyToBuffer(&b[0])
 	if status != tflite.OK {
-		log.Fatal("output failed")
+		log.Println("output failed")
+		return
 	}
 	results := []result{}
 	for i := 0; i < output_size; i++ {

@@ -183,27 +183,6 @@ func main() {
 	flag.StringVar(&image_path, "image", "aa.png", "path to image file")
 	flag.Parse()
 
-	model := tflite.NewModelFromFile(model_path)
-	if model == nil {
-		log.Fatal("cannot load model")
-	}
-	defer model.Delete()
-
-	options := tflite.NewInterpreterOptions()
-	options.SetNumThread(4)
-	defer options.Delete()
-
-	interpreter := tflite.NewInterpreter(model, options)
-	if interpreter == nil {
-		log.Fatal("cannot create interpreter")
-	}
-	defer interpreter.Delete()
-
-	status := interpreter.AllocateTensors()
-	if status != tflite.OK {
-		log.Fatal("allocate failed")
-	}
-
 	f, err := os.Open(image_path)
 	if err != nil {
 		log.Fatal(err)
@@ -213,6 +192,30 @@ func main() {
 	img, _, err := image.Decode(f)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	model := tflite.NewModelFromFile(model_path)
+	if model == nil {
+		log.Println("cannot load model")
+		return
+	}
+	defer model.Delete()
+
+	options := tflite.NewInterpreterOptions()
+	options.SetNumThread(4)
+	defer options.Delete()
+
+	interpreter := tflite.NewInterpreter(model, options)
+	if interpreter == nil {
+		log.Println("cannot create interpreter")
+		return
+	}
+	defer interpreter.Delete()
+
+	status := interpreter.AllocateTensors()
+	if status != tflite.OK {
+		log.Println("allocate failed")
+		return
 	}
 
 	poses := estimateMultiplePoses(
@@ -225,7 +228,6 @@ func main() {
 		0.5,
 		30)
 
-	println(len(poses))
 	for _, pose := range poses {
 		for _, keypoint := range pose.keypoints {
 			fmt.Println(keypoint.part)
@@ -318,7 +320,7 @@ func main() {
 
 	err = draw2dimg.SaveToPngFile("output.png", canvas)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }
 
@@ -720,7 +722,8 @@ func estimateMultiplePoses(
 
 	status := interpreter.Invoke()
 	if status != tflite.OK {
-		log.Fatal("invoke failed")
+		log.Println("invoke failed")
+		return nil
 	}
 	scores := interpreter.GetOutputTensor(0)
 	offsets := interpreter.GetOutputTensor(1)

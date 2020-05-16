@@ -41,12 +41,14 @@ func smartreply(interpreter *tflite.Interpreter, s string) []result {
 
 	status = interpreter.AllocateTensors()
 	if status != tflite.OK {
-		log.Fatal("allocate failed")
+		log.Println("allocate failed")
+		return
 	}
 
 	status = interpreter.Invoke()
 	if status != tflite.OK {
-		log.Fatal("invoke failed")
+		log.Println("invoke failed")
+		return
 	}
 
 	messages := interpreter.GetOutputTensor(0)
@@ -73,7 +75,8 @@ func main() {
 
 	model := tflite.NewModelFromFile(model_path)
 	if model == nil {
-		log.Fatal("cannot load model")
+		log.Println("cannot load model")
+		return
 	}
 	defer model.Delete()
 
@@ -97,7 +100,8 @@ func main() {
 
 		interpreter := tflite.NewInterpreter(model, options)
 		if interpreter == nil {
-			log.Fatal("cannot create interpreter")
+			log.Println("cannot create interpreter")
+			return
 		}
 
 		results := smartreply(interpreter, scanner.Text())
@@ -113,6 +117,7 @@ func main() {
 		interpreter.Delete()
 	}
 	if scanner.Err() != nil {
-		log.Fatal(scanner.Err())
+		log.Println(scanner.Err())
+		return
 	}
 }

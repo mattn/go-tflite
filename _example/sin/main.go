@@ -11,7 +11,8 @@ import (
 func main() {
 	model := tflite.NewModelFromFile("sin_model.tflite")
 	if model == nil {
-		log.Fatal("cannot load model")
+		log.Println("cannot load model")
+		return
 	}
 	defer model.Delete()
 
@@ -26,10 +27,12 @@ func main() {
 		input.SetFloat32s([]float32{v})
 		interpreter.Invoke()
 		output := interpreter.GetOutputTensor(0)
+		println(len(output.Float32s()))
 		got := float64(output.Float32s()[0])
 		want := math.Sin(float64(v))
 		if math.Abs(got-want) > 0.02 {
-			log.Fatal("bad", i, v, math.Abs(got-want))
+			log.Println("bad", i, v, math.Abs(got-want))
+			return
 		}
 		fmt.Printf("sin(%v) = %v\n", v, got)
 	}

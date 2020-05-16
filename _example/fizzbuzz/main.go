@@ -40,7 +40,8 @@ func display(v []float32, i int) {
 func main() {
 	model := tflite.NewModelFromFile("fizzbuzz_model.tflite")
 	if model == nil {
-		log.Fatal("cannot load model")
+		log.Println("cannot load model")
+		return
 	}
 	defer model.Delete()
 

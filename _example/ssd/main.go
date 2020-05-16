@@ -138,7 +138,8 @@ func main() {
 
 	cam, err := gocv.OpenVideoCapture(*video)
 	if err != nil {
-		log.Fatal("failed reading cam", err)
+		log.Printf("cannot open camera: %v", err)
+		return
 	}
 	defer cam.Close()
 
@@ -149,7 +150,8 @@ func main() {
 
 	model := tflite.NewModelFromFile(*modelPath)
 	if model == nil {
-		log.Fatal("cannot load model")
+		log.Println("cannot load model")
+		return
 	}
 	defer model.Delete()
 
@@ -160,13 +162,15 @@ func main() {
 
 	interpreter := tflite.NewInterpreter(model, options)
 	if interpreter == nil {
-		log.Fatal("cannot create interpreter")
+		log.Println("cannot create interpreter")
+		return
 	}
 	defer interpreter.Delete()
 
 	status := interpreter.AllocateTensors()
 	if status != tflite.OK {
-		log.Fatal("allocate failed")
+		log.Println("allocate failed")
+		return
 	}
 
 	input := interpreter.GetInputTensor(0)

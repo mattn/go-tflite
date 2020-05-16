@@ -42,21 +42,25 @@ func main() {
 
 	model := tflite.NewModelFromFile("mnist_model.tflite")
 	if model == nil {
-		log.Fatal("cannot load model")
+		log.Println("cannot load model")
+		return
 	}
 	defer model.Delete()
 
 	devices, err := edgetpu.DeviceList()
 	if err != nil {
-		log.Fatalf("Could not get EdgeTPU devices: %v", err)
+		log.Printf("Could not get EdgeTPU devices: %v", err)
+		return
 	}
 	if len(devices) == 0 {
-		log.Fatal("No edge TPU devices found")
+		log.Println("No edge TPU devices found")
+		return
 	}
 
 	edgetpuVersion, err := edgetpu.Version()
 	if err != nil {
-		log.Fatalf("Could not get EdgeTPU version: %v", err)
+		log.Printf("Could not get EdgeTPU version: %v", err)
+		return
 	}
 	fmt.Printf("EdgeTPU Version: %s\n", edgetpuVersion)
 	edgetpu.Verbosity(verbosity)
@@ -70,7 +74,8 @@ func main() {
 
 	status := interpreter.AllocateTensors()
 	if status != tflite.OK {
-		log.Fatal("allocate failed")
+		log.Println("allocate failed")
+		return
 	}
 
 	input := interpreter.GetInputTensor(0)
@@ -84,7 +89,8 @@ func main() {
 	}
 	status = interpreter.Invoke()
 	if status != tflite.OK {
-		log.Fatal("invoke failed")
+		log.Println("invoke failed")
+		return
 	}
 
 	output := interpreter.GetOutputTensor(0)

@@ -94,12 +94,14 @@ func main() {
 	}
 	in2, err := predict(style, mpredict)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return
 	}
 
 	model := tflite.NewModelFromFile(mstyle)
 	if model == nil {
-		log.Fatal("cannot load model")
+		log.Println("cannot load model")
+		return
 	}
 	defer model.Delete()
 

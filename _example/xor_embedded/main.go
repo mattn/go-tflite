@@ -30,7 +30,8 @@ func main() {
 
 	model := tflite.NewModel(b)
 	if model == nil {
-		log.Fatal("cannot load model")
+		log.Println("cannot load model")
+		return
 	}
 	defer model.Delete()
 

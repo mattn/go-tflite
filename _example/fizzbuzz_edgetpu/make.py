@@ -45,7 +45,7 @@ converter.representative_dataset = representative_dataset_gen
 converter.target_spec.supported_ops = [lite.OpsSet.TFLITE_BUILTINS_INT8]
 converter.inference_input_type = tf.uint8
 converter.inference_output_type = tf.uint8
-converter.optimizations = [tf.lite.Optimize.DEFAULT]
+converter.optimizations = [tf.lite.Optimize.OPTIMIZE_FOR_SIZE]
 
 tflite_model = converter.convert()
 with open('fizzbuzz_model_quant.tflite', 'wb') as file:

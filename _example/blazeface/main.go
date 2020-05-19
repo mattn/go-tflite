@@ -28,19 +28,8 @@ var (
 
 type ssdResult struct {
 	loc   []float32
-	clazz []float32
 	score []float32
 	mat   gocv.Mat
-}
-
-type ssdClass struct {
-	loc   []float32
-	score float64
-	index int
-}
-
-type result interface {
-	Image() image.Image
 }
 
 func copySlice(f []float32) []float32 {

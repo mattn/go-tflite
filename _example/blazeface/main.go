@@ -173,6 +173,8 @@ func omitFaces(faces []face) []face {
 }
 
 func main() {
+	flag.Parse()
+
 	// Setup Pixel window
 	window := gocv.NewWindow("Webcam Window")
 	defer window.Close()

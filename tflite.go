@@ -207,6 +207,15 @@ func (t *Tensor) Dim(index int) int {
 	return int(C.TfLiteTensorDim(t.t, C.int32_t(index)))
 }
 
+// Shape return shape of the tensor.
+func (t *Tensor) Shape() []int {
+	shape := make([]int, t.NumDims())
+	for i := 0; i < t.NumDims(); i++ {
+		shape[i] = t.Dim(i)
+	}
+	return shape
+}
+
 // ByteSize return byte size of the tensor.
 func (t *Tensor) ByteSize() uint {
 	return uint(C.TfLiteTensorByteSize(t.t))

@@ -10,6 +10,7 @@ require (
 	github.com/mattn/go-pointer v0.0.0-20190911064623-a0a44394634f
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/rakyll/statik v0.1.7
+	github.com/vincent-petithory/dataurl v0.0.0-20191104211930-d1553a71de50
 	gocv.io/x/gocv v0.23.0
 	golang.org/x/image v0.0.0-20200430140353-33d19683fad8
 )

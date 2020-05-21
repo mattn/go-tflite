@@ -126,6 +126,10 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 	output := interpreter.GetOutputTensor(0)
 	typ := output.Type()
 	shape := output.Shape()
+	anc := 1
+	if len(shape) == 5 {
+		anc = shape[3]
+	}
 
 	qp := input.QuantizationParams()
 	log.Printf("width: %v, height: %v, type: %v, scale: %v, zeropoint: %v", wanted_width, wanted_height, input.Type(), qp.Scale, qp.ZeroPoint)
@@ -184,18 +188,22 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 			resultChan <- &ssdResult{
 				loc:   loc,
 				thr:   0.8,
-				anc:   1,
+				anc:   anc,
+				cls:   10,
 				shape: shape,
 				mat:   frame,
 			}
 		case tflite.Float32:
 			f := output.Float32s()
 			loc = make([]float32, len(f), len(f))
-			copy(loc, f)
+			for i, v := range f {
+				loc[i] = v
+			}
 			resultChan <- &ssdResult{
 				loc:   loc,
 				thr:   0.3,
-				anc:   shape[3],
+				anc:   anc,
+				cls:   80,
 				shape: shape,
 				mat:   frame,
 			}
@@ -332,7 +340,6 @@ func main() {
 			shape := result.shape
 			sx := float32(size[1]) / float32(shape[1])
 			sy := float32(size[0]) / float32(shape[2])
-			fmt.Println(shape, len(loc))
 			for i := 0; i < shape[1]; i++ {
 				for j := 0; j < shape[2]; j++ {
 					for k := 0; k < result.anc; k++ {
@@ -352,7 +359,7 @@ func main() {
 							x2:    x1 + w/2,
 							y2:    y1 + h/2,
 							score: loc[idx+4],
-							class: 1, //argmax(loc[idx+5 : idx+5+result.cls]),
+							class: argmax(loc[idx+5 : idx+5+result.cls]),
 						})
 					}
 				}
@@ -360,22 +367,24 @@ func main() {
 		}
 
 		items = omitItems(items)
-		for _, item := range items {
-			c := colornames.Map[colornames.Names[item.class%len(colornames.Names)]]
-			fmt.Println(item)
+		for i, item := range items {
+			ci := item.class % len(colornames.Names)
+			c := colornames.Map[colornames.Names[ci]]
 			gocv.Rectangle(&result.mat, image.Rect(
 				int(item.x1),
 				int(item.y1),
 				int(item.x2),
 				int(item.y2),
 			), c, 2)
-			/*
-				text := fmt.Sprintf("%d %.5f %s", i, class.score, label)
-				gocv.PutText(&result.mat, text, image.Pt(
-					int(float32(size[1])*class.loc[1]),
-					int(float32(size[0])*class.loc[0]),
-				), gocv.FontHersheySimplex, 1.2, c, 1)
-			*/
+			label := "unknown"
+			if item.class < len(labels) {
+				label = labels[item.class]
+			}
+			text := fmt.Sprintf("%d %s", i, label)
+			gocv.PutText(&result.mat, text, image.Pt(
+				int(item.x1),
+				int(item.y1),
+			), gocv.FontHersheySimplex, 0.5, c, 1)
 		}
 
 		window.IMShow(result.mat)

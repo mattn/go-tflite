@@ -5,9 +5,6 @@ package ops
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <tensorflow/lite/c/c_api.h>
-#include <tensorflow/lite/c/c_api_experimental.h>
-#include <tensorflow/lite/context.h>
 #cgo windows CFLAGS: -D__LITTLE_ENDIAN__
 #cgo CFLAGS: -I/tensorflow/lite/tools/make/downloads/flatbuffers/include
 #cgo CFLAGS: -I/tensorflow/lite/tools/make/downloads/farmhash/src
@@ -22,6 +19,10 @@ package ops
 #cgo linux amd64 LDFLAGS: -L/tensorflow/lite/tools/make/gen/linux_x86_64/lib
 #cgo linux arm32 LDFLAGS: -L/tensorflow/lite/tools/make/gen/rpi_armv7l/lib
 #cgo linux LDFLAGS: -ldl -lrt
+
+#include <tensorflow/lite/c/c_api.h>
+#include <tensorflow/lite/c/c_api_experimental.h>
+#include <tensorflow/lite/context.h>
 
 TfLiteRegistration* Register_ABS();
 TfLiteRegistration* Register_RELU();

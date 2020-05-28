@@ -42,13 +42,13 @@ func smartreply(interpreter *tflite.Interpreter, s string) []result {
 	status = interpreter.AllocateTensors()
 	if status != tflite.OK {
 		log.Println("allocate failed")
-		return
+		return nil
 	}
 
 	status = interpreter.Invoke()
 	if status != tflite.OK {
 		log.Println("invoke failed")
-		return
+		return nil
 	}
 
 	messages := interpreter.GetOutputTensor(0)

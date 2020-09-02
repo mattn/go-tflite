@@ -13,4 +13,5 @@ require (
 	github.com/vincent-petithory/dataurl v0.0.0-20191104211930-d1553a71de50
 	gocv.io/x/gocv v0.23.0
 	golang.org/x/image v0.0.0-20200430140353-33d19683fad8
+	gonum.org/v1/plot v0.7.0 // indirect
 )

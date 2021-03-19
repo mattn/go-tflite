@@ -5,7 +5,7 @@ package tflite
 #include "tflite.go.h"
 #endif
 #cgo LDFLAGS: -ltensorflowlite_c
-#cgo android LDFLAGS: -ldl
+#cgo android LDFLAGS: -ldl -llog -lm
 #cgo linux,!android LDFLAGS: -ldl -lrt
 */
 import "C"

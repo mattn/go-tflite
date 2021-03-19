@@ -4,7 +4,8 @@ package xnnpack
 #ifndef GO_XNNPACK_H
 #include "xnnpack.go.h"
 #endif
-#cgo LDFLAGS: -ltensorflowlite-delegate_xnnpack -lXNNPACK
+#cgo LDFLAGS: -ltensorflowlite_c
+#cgo android LDFLAGS: -lm -llog
 */
 import "C"
 import (

@@ -314,6 +314,11 @@ func (o *InterpreterOptions) ExpAddCustomOp(name string, reg *ExpRegistration, m
 	C.TfLiteInterpreterOptionsAddCustomOp(o.o, ptr, r, C.int(minVersion), C.int(maxVersion))
 }
 
+// SetUseNNAPI enable or disable the NN API for the interpreter (true to enable).
+func (o *InterpreterOptions) SetUseNNAPI(enable bool) {
+	C.TfLiteInterpreterOptionsSetUseNNAPI(o.o, C.bool(enable))
+}
+
 // DynamicBuffer is buffer hold multiple strings.
 type DynamicBuffer struct {
 	data   bytes.Buffer

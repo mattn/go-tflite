@@ -106,7 +106,9 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 			copy(input.Float32s(), ff)
 		} else {
 			gocv.Resize(frame, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
-			copy(input.UInt8s(), resized.DataPtrUint8())
+			if v, err := resized.DataPtrUint8(); err == nil {
+				copy(input.UInt8s(), v)
+			}
 		}
 		resized.Close()
 		status := interpreter.Invoke()
@@ -144,6 +146,8 @@ func main() {
 		return
 	}
 	defer cam.Close()
+
+	cam.Set(gocv.VideoCaptureBufferSize, 0)
 
 	window.ResizeWindow(
 		int(cam.Get(gocv.VideoCaptureFrameWidth)),

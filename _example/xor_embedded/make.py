@@ -1,37 +1,39 @@
+import tensorflow as tf
+from tensorflow import keras
 import numpy as np
 
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.optimizers import RMSprop
-from tensorflow.lite.python import lite
+x_train = np.array([[0, 0],
+                    [1, 0],
+                    [0, 1],
+                    [1, 1]]).astype(np.float32)
 
-X_train = np.array([[0.0, 0.0],
-                    [1.0, 0.0],
-                    [0.0, 1.0],
-                    [1.0, 1.0]])
-Y_train = np.array([0.0,
-                    1.0,
-                    1.0,
-                    0.0])
-model = Sequential()
-output_count_layer0 = 2
-model.add(
-    Dense(
-      output_count_layer0,
-      input_shape=(2, ),
-      activation='sigmoid'))  # Need to specify input shape for input layer
-output_count_layer1 = 1
-model.add(Dense(output_count_layer1, activation='linear'))
-model.compile(
-    loss='mean_squared_error', optimizer=RMSprop(), metrics=['accuracy'])
-BATCH_SIZE = 4
-history = model.fit(
-    X_train, Y_train, batch_size=BATCH_SIZE, epochs=3600, verbose=1)
-X_test = X_train
-Y_test = Y_train
-score = model.evaluate(X_test, Y_test, verbose=0)
-model.save('xor_model.h5')
+y_train = np.array([0,
+                    1,
+                    1,
+                    0]).astype(np.float32)
 
-converter = lite.TFLiteConverter.from_keras_model_file('xor_model.h5')
-tflite_model = converter.convert()
-open('public/xor_model.tflite', 'wb').write(tflite_model)
+
+model = tf.keras.Sequential()
+model.add(keras.layers.Dense(16, activation='relu', input_shape=(2,)))
+model.add(keras.layers.Dense(16, activation='relu'))
+model.add(keras.layers.Dense(1))
+model.compile(optimizer='adam', loss="mse", metrics=["mae"])
+history = model.fit(x_train, y_train, epochs=500, batch_size=4)
+model.save('saved_model')
+
+
+def representative_dataset():
+    for i in range(4):
+        yield([x_train[i]])
+
+
+converter = tf.lite.TFLiteConverter.from_saved_model("saved_model")
+converter.optimizations = [tf.lite.Optimize.DEFAULT]
+converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+converter.inference_input_type = tf.float32
+converter.inference_output_type = tf.float32
+converter.representative_dataset = representative_dataset
+model_tflite = converter.convert()
+
+with open('xor_model.tflite', 'wb') as f:
+  f.write(model_tflite)

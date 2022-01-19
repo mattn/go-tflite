@@ -4,6 +4,7 @@ package gl
 #ifndef GO_TFLITE_H
 #include "gl.go.h"
 #endif
+#cgo pkg-config: osmesa
 #cgo LDFLAGS: -ltensorflowlite_c -ltensorflowlite_c_delegate_gpu
 #cgo linux LDFLAGS: -ldl -lrt
 */

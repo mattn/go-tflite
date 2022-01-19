@@ -27,9 +27,11 @@ func top(a []float32) int {
 
 func main() {
 	var verbosity int
+	var filename string
+	flag.StringVar(&filename, "f", "4.png", "input filename")
 	flag.IntVar(&verbosity, "verbosity", 0, "Edge TPU Verbosity")
 
-	f, err := os.Open(os.Args[1])
+	f, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
 	}

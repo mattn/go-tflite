@@ -122,7 +122,7 @@ func capture(wg *sync.WaitGroup, frameChan chan image.Image, ctx context.Context
 		}
 
 		// Push the frame to the channel
-		img, _, err := image.Decode(bytes.NewReader(buf))
+		img, _, err := image.Decode(bytes.NewReader(buf.GetBytes()))
 		if err != nil {
 			continue
 		}

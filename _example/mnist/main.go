@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"image"
 	_ "image/png"
@@ -24,7 +25,11 @@ func top(a []float32) int {
 }
 
 func main() {
-	f, err := os.Open(os.Args[1])
+	var filename string
+	flag.StringVar(&filename, "f", "4.png", "input filename")
+	flag.Parse()
+
+	f, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
 	}

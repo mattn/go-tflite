@@ -30,6 +30,7 @@ func main() {
 	var filename string
 	flag.StringVar(&filename, "f", "4.png", "input filename")
 	flag.IntVar(&verbosity, "verbosity", 0, "Edge TPU Verbosity")
+	flag.Parse()
 
 	f, err := os.Open(filename)
 	if err != nil {

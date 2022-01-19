@@ -4,8 +4,6 @@ go 1.13
 
 replace github.com/mattn/go-tflite => ../..
 
-replace github.com/mattn/go-tflite/delegates/xnnpack => ../../delegates/xnnpack
-
 require (
 	github.com/mattn/go-tflite v0.0.0-00010101000000-000000000000
 	gocv.io/x/gocv v0.29.0

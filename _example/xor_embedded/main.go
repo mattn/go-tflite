@@ -1,34 +1,19 @@
 package main
 
-//go:generate statik
-
 import (
+	_ "embed"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math"
 
 	"github.com/mattn/go-tflite"
-	_ "github.com/mattn/go-tflite/_example/xor_embedded/statik"
-	"github.com/rakyll/statik/fs"
 )
 
-func main() {
-	statikFS, err := fs.New()
-	if err != nil {
-		log.Fatal(err)
-	}
-	f, err := statikFS.Open("/xor_model.tflite")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-	b, err := ioutil.ReadAll(f)
-	if err != nil {
-		log.Fatal(err)
-	}
+//go:embed xor_model.tflite
+var xor_model []byte
 
-	model := tflite.NewModel(b)
+func main() {
+	model := tflite.NewModel(xor_model)
 	if model == nil {
 		log.Println("cannot load model")
 		return

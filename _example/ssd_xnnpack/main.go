@@ -25,6 +25,7 @@ var (
 	video     = flag.String("camera", "0", "video cature")
 	modelPath = flag.String("model", "detect.tflite", "path to model file")
 	labelPath = flag.String("label", "labelmap.txt", "path to label file")
+	limits    = flag.Int("limits", 5, "limits of items")
 )
 
 type ssdResult struct {
@@ -182,7 +183,7 @@ func main() {
 	wg.Add(1)
 
 	// Start up the background capture
-	resultChan := make(chan *ssdResult, 1)
+	resultChan := make(chan *ssdResult, 2)
 	go detect(ctx, &wg, resultChan, interpreter, wanted_width, wanted_height, wanted_channels, cam)
 
 	sc := make(chan os.Signal, 1)
@@ -218,8 +219,8 @@ func main() {
 		sort.Slice(classes, func(i, j int) bool {
 			return classes[i].score > classes[j].score
 		})
-		if len(classes) > 5 {
-			classes = classes[:5]
+		if len(classes) > *limits {
+			classes = classes[:*limits]
 		}
 
 		size := result.mat.Size()

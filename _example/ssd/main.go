@@ -24,6 +24,7 @@ var (
 	video     = flag.String("camera", "0", "video cature")
 	modelPath = flag.String("model", "detect.tflite", "path to model file")
 	labelPath = flag.String("label", "labelmap.txt", "path to label file")
+	limits    = flag.Int("limits", 5, "limits of items")
 )
 
 type ssdResult struct {
@@ -218,8 +219,8 @@ func main() {
 		sort.Slice(classes, func(i, j int) bool {
 			return classes[i].score > classes[j].score
 		})
-		if len(classes) > 5 {
-			classes = classes[:5]
+		if len(classes) > *limits {
+			classes = classes[:*limits]
 		}
 
 		size := result.mat.Size()

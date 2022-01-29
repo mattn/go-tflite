@@ -25,6 +25,7 @@ var (
 	video     = flag.String("camera", "0", "video cature")
 	modelPath = flag.String("model", "mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite", "path to model file")
 	labelPath = flag.String("label", "coco_labels.txt", "path to label file")
+	limits    = flag.Int("limits", 5, "limits of items")
 	verbosity = flag.Int("verbosity", 0, "Edge TPU Verbosity")
 )
 
@@ -241,8 +242,8 @@ func main() {
 		sort.Slice(classes, func(i, j int) bool {
 			return classes[i].score > classes[j].score
 		})
-		if len(classes) > 5 {
-			classes = classes[:5]
+		if len(classes) > *limits {
+			classes = classes[:*limits]
 		}
 
 		size := result.mat.Size()

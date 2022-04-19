@@ -32,7 +32,6 @@ _make_registration(void* o_init, void* o_free, void* o_prepare, void* o_invoke, 
 }
 
 static void look_context(TfLiteContext *context) {
-  context->tensors;
   TfLiteIntArray *plan = NULL;
   context->GetExecutionPlan(context, &plan);
   if (plan == NULL) return;

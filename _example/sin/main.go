@@ -27,7 +27,6 @@ func main() {
 		input.SetFloat32s([]float32{v})
 		interpreter.Invoke()
 		output := interpreter.GetOutputTensor(0)
-		println(len(output.Float32s()))
 		got := float64(output.Float32s()[0])
 		want := math.Sin(float64(v))
 		if math.Abs(got-want) > 0.02 {

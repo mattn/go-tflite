@@ -92,5 +92,5 @@ rm -Rf edgetpu
 MIT
 
 ## Author
-Yasuhrio Matsumoto (a.k.a. mattn)
+Yasuhiro Matsumoto (a.k.a. mattn)
 

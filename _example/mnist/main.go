@@ -73,5 +73,5 @@ func main() {
 
 	output := interpreter.GetOutputTensor(0)
 	out := output.Float32s()
-	fmt.Println(top(out))
+	fmt.Printf("%s is %d", filename, top(out))
 }

@@ -56,6 +56,7 @@ func main() {
 		if dataURL.ContentType() != "image/png" {
 			log.Println(err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 
 		img, _, err := image.Decode(bytes.NewReader(dataURL.Data))
@@ -75,6 +76,7 @@ func main() {
 		status = interpreter.Invoke()
 		if status != tflite.OK {
 			log.Println("invoke failed")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		fmt.Fprintf(w, "%v", argmax(output.Float32s()))

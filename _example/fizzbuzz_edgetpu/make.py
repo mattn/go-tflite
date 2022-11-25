@@ -3,7 +3,6 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Activation
-from tensorflow.lite.python import lite
 
 
 def fizzbuzz(i):
@@ -32,7 +31,6 @@ model.add(Activation('softmax'))
 model.compile(loss='categorical_crossentropy',
               optimizer='adam', metrics=['accuracy'])
 model.fit(trX, trY, epochs=3600, batch_size=64)
-model.save('fizzbuzz_model.h5')
 
 
 def representative_dataset_gen():
@@ -40,13 +38,13 @@ def representative_dataset_gen():
         yield [trX[i: i + 1]]
 
 
-converter = lite.TFLiteConverter.from_keras_model_file('fizzbuzz_model.h5')
+converter = tf.lite.TFLiteConverter.from_keras_model(model)
 converter.representative_dataset = representative_dataset_gen
-converter.target_spec.supported_ops = [lite.OpsSet.TFLITE_BUILTINS_INT8]
+converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
 converter.inference_input_type = tf.uint8
 converter.inference_output_type = tf.uint8
 converter.optimizations = [tf.lite.Optimize.OPTIMIZE_FOR_SIZE]
 
 tflite_model = converter.convert()
-with open('fizzbuzz_model_quant.tflite', 'wb') as file:
-    file.write(tflite_model)
+with open('fizzbuzz_model_quant.tflite', 'wb') as f:
+    f.write(tflite_model)

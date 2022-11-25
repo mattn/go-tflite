@@ -1,8 +1,9 @@
+import tensorflow as tf
+
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Activation
 from tensorflow.keras.optimizers import Adam
-from tensorflow.lite.python import lite
 from tensorflow.keras.utils import to_categorical
 
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
@@ -29,8 +30,8 @@ model.compile(
 model.fit(
     x_train, y_train, batch_size=128, epochs=20,
     verbose=1, validation_data=(x_test, y_test))
-model.save('mnist_model.h5')
 
-converter = lite.TFLiteConverter.from_keras_model_file('mnist_model.h5')
+converter = tf.lite.TFLiteConverter.from_keras_model(model)
 tflite_model = converter.convert()
-open('mnist_model.tflite', 'wb').write(tflite_model)
+with open('mnist_model.tflite', 'wb') as f:
+    f.write(tflite_model)

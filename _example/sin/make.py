@@ -1,9 +1,9 @@
 import numpy as np
+import tensorflow as tf
 
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Activation
 from tensorflow.keras.optimizers import Adam
-from tensorflow.lite.python import lite
 
 data = np.loadtxt('sin.csv', delimiter=',', unpack=True)
 model = Sequential()
@@ -17,6 +17,7 @@ model.compile(loss='mean_squared_error', optimizer=sgd)
 model.fit(data[0], data[1], epochs=1000, batch_size=20, verbose=0)
 model.save('sin_model.h5')
 
-converter = lite.TFLiteConverter.from_keras_model_file('sin_model.h5')
+converter = tf.lite.TFLiteConverter.from_keras_model(model)
 tflite_model = converter.convert()
-open('sin_model.tflite', 'wb').write(tflite_model)
+with open('sin_model.tflite', 'wb') as f:
+    f.write(tflite_model)

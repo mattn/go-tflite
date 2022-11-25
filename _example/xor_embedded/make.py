@@ -24,7 +24,7 @@ model.save('saved_model')
 
 def representative_dataset():
     for i in range(4):
-        yield([x_train[i]])
+        yield [x_train[i]]
 
 
 converter = tf.lite.TFLiteConverter.from_saved_model("saved_model")
@@ -36,4 +36,4 @@ converter.representative_dataset = representative_dataset
 model_tflite = converter.convert()
 
 with open('xor_model.tflite', 'wb') as f:
-  f.write(model_tflite)
+    f.write(model_tflite)

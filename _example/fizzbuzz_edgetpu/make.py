@@ -1,8 +1,5 @@
 import numpy as np
-
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Activation
 
 
 def fizzbuzz(i):
@@ -20,14 +17,16 @@ def bin(i, num_digits):
     return np.array([i >> d & 1 for d in range(num_digits)], dtype=np.float32)
 
 
-NUM_DIGITS = 7
-trX = np.array([bin(i, NUM_DIGITS) for i in range(1, 101)])
+trX = np.array([bin(i, 7) for i in range(1, 101)])
 trY = np.array([fizzbuzz(i) for i in range(1, 101)])
-model = Sequential()
-model.add(Dense(64, input_dim=7))
-model.add(Activation('tanh'))
-model.add(Dense(4, input_dim=64))
-model.add(Activation('softmax'))
+model = tf.keras.Sequential([
+    tf.keras.layers.Dense(64, input_dim=7),
+    tf.keras.layers.Activation('tanh'),
+    tf.keras.layers.Dense(4, input_dim=64),
+    tf.keras.layers.Activation('softmax'),
+])
+
+model.summary()
 model.compile(loss='categorical_crossentropy',
               optimizer='adam', metrics=['accuracy'])
 model.fit(trX, trY, epochs=3600, batch_size=64)
@@ -44,7 +43,6 @@ converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
 converter.inference_input_type = tf.uint8
 converter.inference_output_type = tf.uint8
 converter.optimizations = [tf.lite.Optimize.OPTIMIZE_FOR_SIZE]
-
 tflite_model = converter.convert()
 with open('fizzbuzz_model_quant.tflite', 'wb') as f:
     f.write(tflite_model)

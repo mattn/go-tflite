@@ -103,9 +103,10 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 			}
 		} else {
 			gocv.Resize(frame, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
-			if v, err := resized.DataPtrUint8(); err == nil {
-				copy(input.UInt8s(), v)
-			}
+			v := resized.DataPtrUint8()
+			copy(input.UInt8s(), v)
+			//v := resized.DataPtrUint8()
+			//copy(input.UInt8s(), v)
 		}
 		resized.Close()
 		status := interpreter.Invoke()
@@ -158,7 +159,7 @@ func main() {
 
 	options := tflite.NewInterpreterOptions()
 	options.AddDelegate(xnnpack.New(xnnpack.DelegateOptions{NumThreads: 4}))
-	//options.SetNumThread(4)
+	options.SetNumThread(8)
 	defer options.Delete()
 
 	interpreter := tflite.NewInterpreter(model, options)

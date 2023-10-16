@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"image"
+	_ "image/jpeg"
 	_ "image/png"
 	"log"
 	"os"
@@ -88,7 +89,7 @@ func main() {
 	dx, dy := bounds.Dx(), bounds.Dy()
 
 	if wanted_type == tflite.UInt8 {
-		bb := make([]byte, dx*dy*wanted_channels)
+		bb := make([]byte, wanted_width*wanted_height*wanted_channels)
 		for y := 0; y < dy; y++ {
 			for x := 0; x < dx; x++ {
 				col := resized.At(x, y)
@@ -98,7 +99,19 @@ func main() {
 				bb[(y*dx+x)*3+2] = byte(float64(b) / 255.0)
 			}
 		}
-		input.CopyFromBuffer(bb)
+		copy(input.UInt8s(), bb)
+	} else if wanted_type == tflite.Float32 {
+		ff := make([]float32, wanted_width*wanted_height*wanted_channels)
+		for y := 0; y < dy; y++ {
+			for x := 0; x < dx; x++ {
+				col := resized.At(x, y)
+				r, g, b, _ := col.RGBA()
+				ff[(y*dx+x)*3+0] = float32(r) / 65535.0
+				ff[(y*dx+x)*3+1] = float32(g) / 65535.0
+				ff[(y*dx+x)*3+2] = float32(b) / 65535.0
+			}
+		}
+		copy(input.Float32s(), ff)
 	} else {
 		log.Println("is not wanted type")
 		return

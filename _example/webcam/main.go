@@ -74,10 +74,6 @@ type ssdClass struct {
 	index int
 }
 
-type result interface {
-	Image() image.Image
-}
-
 func loadLabels(filename string) ([]string, error) {
 	labels := []string{}
 	f, err := os.Open(*labelPath)

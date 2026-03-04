@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"image"
-	_ "image/png"
 	"log"
 	"os"
 	"os/signal"
@@ -40,10 +39,6 @@ type ssdClass struct {
 	loc   []float32
 	score float64
 	index int
-}
-
-type result interface {
-	Image() image.Image
 }
 
 func loadLabels(filename string) ([]string, error) {
@@ -104,11 +99,9 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 			}
 		} else {
 			gocv.Resize(frame, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
-			//if v, err := resized.DataPtrUint8(); err == nil {
-			//	copy(input.UInt8s(), v)
-			//}
-			v := resized.DataPtrUint8()
-			copy(input.UInt8s(), v)
+			if v, err := resized.DataPtrUint8(); err == nil {
+				copy(input.UInt8s(), v)
+			}
 		}
 		resized.Close()
 		status := interpreter.Invoke()

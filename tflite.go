@@ -21,16 +21,19 @@ import (
 
 // Model is TfLiteModel.
 type Model struct {
-	m *C.TfLiteModel
+	m    *C.TfLiteModel
+	data unsafe.Pointer
 }
 
 // NewModel create new Model from buffer.
 func NewModel(model_data []byte) *Model {
-	m := C.TfLiteModelCreate(C.CBytes(model_data), C.size_t(len(model_data)))
+	data := C.CBytes(model_data)
+	m := C.TfLiteModelCreate(data, C.size_t(len(model_data)))
 	if m == nil {
+		C.free(data)
 		return nil
 	}
-	return &Model{m: m}
+	return &Model{m: m, data: data}
 }
 
 // NewModelFromFile create new Model from file data.
@@ -49,6 +52,10 @@ func NewModelFromFile(model_path string) *Model {
 func (m *Model) Delete() {
 	if m != nil {
 		C.TfLiteModelDelete(m.m)
+		if m.data != nil {
+			C.free(m.data)
+			m.data = nil
+		}
 	}
 }
 

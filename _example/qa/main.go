@@ -355,7 +355,7 @@ func main() {
 		log.Println("cannot load model")
 		return
 	}
-	//defer model.Delete()
+	defer model.Delete()
 
 	interpreter := tflite.NewInterpreter(model, nil)
 	defer interpreter.Delete()

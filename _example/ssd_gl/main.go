@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"image"
-	_ "image/png"
 	"log"
 	"os"
 	"os/signal"
@@ -39,10 +38,6 @@ type ssdClass struct {
 	loc   [4]float32
 	score float64
 	index int
-}
-
-type result interface {
-	Image() image.Image
 }
 
 func loadLabels(filename string) ([]string, error) {
@@ -155,7 +150,7 @@ func main() {
 		log.Println("cannot load model")
 		return
 	}
-	//defer model.Delete()
+	defer model.Delete()
 
 	// Get the list of devices
 	options := tflite.NewInterpreterOptions()

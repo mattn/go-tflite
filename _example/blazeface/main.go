@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	_ "image/png"
 	"log"
 	"math"
 	"os"

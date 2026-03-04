@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	_ "image/jpeg"
 	"log"
 	"os"
 	"regexp"

@@ -42,7 +42,9 @@ type Delegate struct {
 
 func New(device Device) delegates.Delegater {
 	var d *C.TfLiteDelegate
-	d = C.edgetpu_create_delegate(uint32(device.Type), C.CString(device.Path), nil, 0)
+	cpath := C.CString(device.Path)
+	defer C.free(unsafe.Pointer(cpath))
+	d = C.edgetpu_create_delegate(uint32(device.Type), cpath, nil, 0)
 	if d == nil {
 		return nil
 	}

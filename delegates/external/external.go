@@ -22,7 +22,11 @@ type DelegateOptions struct {
 }
 
 func (o *DelegateOptions) Insert(key, value string) error {
-	if C.TfLiteExternalDelegateOptionsInsert(&o.o, C.CString(key), C.CString(value)) == C.kTfLiteError {
+	ckey := C.CString(key)
+	defer C.free(unsafe.Pointer(ckey))
+	cvalue := C.CString(value)
+	defer C.free(unsafe.Pointer(cvalue))
+	if C.TfLiteExternalDelegateOptionsInsert(&o.o, ckey, cvalue) == C.kTfLiteError {
 		return errors.New("Max options")
 	}
 	return nil
@@ -35,7 +39,9 @@ type Delegate struct {
 
 func New(options DelegateOptions) delegates.Delegater {
 	var d *C.TfLiteDelegate
-	coptions := C.TfLiteExternalDelegateOptionsDefault(C.CString(options.LibPath))
+	clibPath := C.CString(options.LibPath)
+	defer C.free(unsafe.Pointer(clibPath))
+	coptions := C.TfLiteExternalDelegateOptionsDefault(clibPath)
 	d = C.TfLiteExternalDelegateCreate(&coptions)
 	if d == nil {
 		return nil

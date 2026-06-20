@@ -5,6 +5,6 @@ go 1.13
 replace github.com/mattn/go-tflite => ../..
 
 require (
-	github.com/coreos/pkg v0.0.0-20220810130054-c7d1c02cb6cf // indirect
-	github.com/mattn/go-tflite v1.0.3 // indirect
+	github.com/coreos/pkg v0.0.0-20240122114842-bbd7aa9bf6fb
+	github.com/mattn/go-tflite v1.0.5
 )

@@ -1,11 +1,13 @@
 module github.com/mattn/go-tflite/_example/yolov3
 
-go 1.13
+go 1.25.0
 
 replace github.com/mattn/go-tflite => ../..
 
 require (
-	github.com/mattn/go-tflite v0.0.0-00010101000000-000000000000
-	gocv.io/x/gocv v0.29.0
-	golang.org/x/image v0.0.0-20211028202545-6944b10bf410
+	github.com/mattn/go-tflite v1.0.5
+	gocv.io/x/gocv v0.43.0
+	golang.org/x/image v0.43.0
 )
+
+require github.com/mattn/go-pointer v0.0.1 // indirect

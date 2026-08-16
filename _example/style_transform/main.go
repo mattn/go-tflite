@@ -42,9 +42,9 @@ func predict(img image.Image, mpredict string) ([]float32, error) {
 	for y := 0; y < dy; y++ {
 		for x := 0; x < dx; x++ {
 			r, g, b, _ := resized.At(x, y).RGBA()
-			in[(y*dx+x)*wanted_channel+0] = float32(r) / 65536
-			in[(y*dx+x)*wanted_channel+1] = float32(g) / 65536
-			in[(y*dx+x)*wanted_channel+2] = float32(b) / 65536
+			in[(y*dx+x)*wanted_channel+0] = float32(r) / 65535
+			in[(y*dx+x)*wanted_channel+1] = float32(g) / 65535
+			in[(y*dx+x)*wanted_channel+2] = float32(b) / 65535
 		}
 	}
 

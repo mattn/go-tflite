@@ -140,16 +140,25 @@ func main() {
 
 	output := interpreter.GetOutputTensor(0)
 	out := output.Float32s()
-	dx = output.Dim(1)
-	dy = output.Dim(2)
+	dy = output.Dim(1)
+	dx = output.Dim(2)
 	wanted_channel = output.Dim(3)
+	clamp := func(v float32) uint16 {
+		if v < 0 {
+			return 0
+		}
+		if v > 1 {
+			return 65535
+		}
+		return uint16(v * 65535)
+	}
 	canvas := image.NewRGBA(image.Rect(0, 0, dx, dy))
 	for y := 0; y < dy; y++ {
 		for x := 0; x < dx; x++ {
-			r := out[(y*dx+x)*wanted_channel+0] * 65536
-			g := out[(y*dx+x)*wanted_channel+1] * 65536
-			b := out[(y*dx+x)*wanted_channel+2] * 65536
-			canvas.Set(x, y, color.RGBA64{R: uint16(r), G: uint16(g), B: uint16(b), A: 65535})
+			r := clamp(out[(y*dx+x)*wanted_channel+0])
+			g := clamp(out[(y*dx+x)*wanted_channel+1])
+			b := clamp(out[(y*dx+x)*wanted_channel+2])
+			canvas.Set(x, y, color.RGBA64{R: r, G: g, B: b, A: 65535})
 		}
 	}
 	resized = imaging.Resize(canvas, origbounds.Dx(), origbounds.Dy(), imaging.Lanczos)

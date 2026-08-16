@@ -106,9 +106,9 @@ func main() {
 			for x := 0; x < dx; x++ {
 				col := resized.At(x, y)
 				r, g, b, _ := col.RGBA()
-				ff[(y*dx+x)*3+0] = float32(r) / 65535.0
-				ff[(y*dx+x)*3+1] = float32(g) / 65535.0
-				ff[(y*dx+x)*3+2] = float32(b) / 65535.0
+				ff[(y*dx+x)*3+0] = (float32(r>>8) - 127.5) / 127.5
+				ff[(y*dx+x)*3+1] = (float32(g>>8) - 127.5) / 127.5
+				ff[(y*dx+x)*3+2] = (float32(b>>8) - 127.5) / 127.5
 			}
 		}
 		copy(input.Float32s(), ff)

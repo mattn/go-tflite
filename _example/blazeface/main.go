@@ -177,12 +177,21 @@ func omitFaces(faces []face) []face {
 	return result
 }
 
-func buildAnchors(wanted_width, wanted_height int) []point {
-	strides := []int{8, 16}
+// buildAnchors reproduces the anchor grid of the MediaPipe face detection
+// models. Short-range models (face_detection_front/short_range/back) use two
+// layers with 2 and 6 anchors per cell; full-range models use a single dense
+// layer at stride 4 with one anchor per cell, recognizable by their anchor
+// count.
+func buildAnchors(wanted_width, wanted_height, numAnchors int) []point {
+	strides := []int{wanted_width / 16, wanted_width / 8}
 	anchors := []int{2, 6}
+	if numAnchors == (wanted_width/4)*(wanted_height/4) {
+		strides = []int{4}
+		anchors = []int{1}
+	}
 
 	var vanchors []point
-	for i := 0; i < 2; i++ {
+	for i := 0; i < len(strides); i++ {
 		stride := strides[i]
 		gridCols := (wanted_width + stride - 1) / stride
 		gridRows := (wanted_height + stride - 1) / stride
@@ -299,7 +308,7 @@ func runImage(interpreter *tflite.Interpreter, image_path string) {
 	input := interpreter.GetInputTensor(0)
 	wanted_height := input.Dim(1)
 	wanted_width := input.Dim(2)
-	vanchors := buildAnchors(wanted_width, wanted_height)
+	vanchors := buildAnchors(wanted_width, wanted_height, interpreter.GetOutputTensor(0).Dim(1))
 
 	size := frame.Size()
 	minSide := *minTile
@@ -384,7 +393,7 @@ func runVideo(interpreter *tflite.Interpreter, video string) {
 		cancel()
 	}()
 
-	vanchors := buildAnchors(wanted_width, wanted_height)
+	vanchors := buildAnchors(wanted_width, wanted_height, interpreter.GetOutputTensor(0).Dim(1))
 
 	var (
 		frames = 0

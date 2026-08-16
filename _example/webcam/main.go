@@ -80,7 +80,7 @@ type ssdClass struct {
 
 func loadLabels(filename string) ([]string, error) {
 	labels := []string{}
-	f, err := os.Open(*labelPath)
+	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}

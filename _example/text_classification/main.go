@@ -141,7 +141,7 @@ func main() {
 			})
 		}
 		sort.Slice(ranks, func(i, j int) bool {
-			return ranks[i].poll < ranks[j].poll
+			return ranks[i].poll > ranks[j].poll
 		})
 		for _, rank := range ranks {
 			fmt.Printf("  %s: %v\n", rank.label, rank.poll)

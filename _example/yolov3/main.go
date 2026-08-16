@@ -94,7 +94,7 @@ func omitItems(items []item) []item {
 	var result []item
 
 	sort.Slice(items, func(i, j int) bool {
-		return items[i].score < items[j].score
+		return items[i].score > items[j].score
 	})
 
 	for _, f1 := range items {
@@ -109,7 +109,7 @@ func omitItems(items []item) []item {
 
 		if !ignore {
 			result = append(result, f1)
-			if len(result) > 20 {
+			if len(result) >= 20 {
 				break
 			}
 		}

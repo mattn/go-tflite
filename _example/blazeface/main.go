@@ -298,7 +298,6 @@ func main() {
 			})
 		}
 		faces = omitFaces(faces)
-		fmt.Println(len(faces))
 
 		for _, face := range faces {
 			gocv.Rectangle(&result.mat, image.Rect(

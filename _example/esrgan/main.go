@@ -84,14 +84,23 @@ func main() {
 
 	output := interpreter.GetOutputTensor(0)
 	ff = output.Float32s()
-	dx, dy = int(output.Dim(1)), int(output.Dim(2))
+	dy, dx = int(output.Dim(1)), int(output.Dim(2))
+	clamp := func(v float32) uint8 {
+		if v < 0 {
+			return 0
+		}
+		if v > 255 {
+			return 255
+		}
+		return uint8(v)
+	}
 	canvas := image.NewRGBA(image.Rect(0, 0, dx, dy))
 	for y := 0; y < dy; y++ {
 		for x := 0; x < dx; x++ {
 			canvas.Set(x, y, color.RGBA{
-				R: uint8(ff[(y*dx+x)*3+0] / 255),
-				G: uint8(ff[(y*dx+x)*3+1] / 255),
-				B: uint8(ff[(y*dx+x)*3+2] / 255),
+				R: clamp(ff[(y*dx+x)*3+0]),
+				G: clamp(ff[(y*dx+x)*3+1]),
+				B: clamp(ff[(y*dx+x)*3+2]),
 				A: 255,
 			})
 		}

@@ -193,8 +193,13 @@ func sigmoid(x float32) float32 {
 	return float32(1 / (1 + math.Exp(float64(x)*(-1))))
 }
 
-const minPoseScore = 0.15
-const minPartScore = 0.5
+const (
+	maxPoseDetections  = 20
+	partScoreThreshold = 0.5
+	nmsRadius          = 20
+	minPoseScore       = 0.15
+	minPartScore       = 0.5
+)
 
 func main() {
 	var model_path, image_path, video_path string
@@ -249,9 +254,9 @@ func runImage(interpreter *tflite.Interpreter, image_path string) {
 	poses, err := estimateMultiplePoses(
 		interpreter,
 		img,
-		5,
-		0.5,
-		20)
+		maxPoseDetections,
+		partScoreThreshold,
+		nmsRadius)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -327,7 +332,7 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *poseResu
 			continue
 		}
 
-		poses, err := estimateMultiplePoses(interpreter, img, 5, 0.5, 20)
+		poses, err := estimateMultiplePoses(interpreter, img, maxPoseDetections, partScoreThreshold, nmsRadius)
 		if err != nil {
 			frame.Close()
 			log.Println(err)
@@ -794,14 +799,31 @@ func estimateMultiplePoses(
 	wanted_height := input.Dim(1)
 	wanted_width := input.Dim(2)
 
-	resized := resize.Resize(uint(wanted_width), uint(wanted_height), img, resize.Bilinear)
+	// Fit the image into the model input while keeping the aspect ratio, and
+	// pad the rest with neutral gray. Squeezing e.g. a wide video frame into
+	// the model input distorts people so much that they no longer get
+	// detected.
+	scale := float64(wanted_width) / float64(img.Bounds().Dx())
+	if s := float64(wanted_height) / float64(img.Bounds().Dy()); s < scale {
+		scale = s
+	}
+	scaledWidth := int(float64(img.Bounds().Dx()) * scale)
+	scaledHeight := int(float64(img.Bounds().Dy()) * scale)
+
+	resized := resize.Resize(uint(scaledWidth), uint(scaledHeight), img, resize.Bilinear)
 	ff := input.Float32s()
 	for y := 0; y < wanted_height; y++ {
 		for x := 0; x < wanted_width; x++ {
-			r, g, b, _ := resized.At(x, y).RGBA()
-			ff[(y*wanted_width+x)*3+0] = (float32(r)/256 - 127.5) / 127.5
-			ff[(y*wanted_width+x)*3+1] = (float32(g)/256 - 127.5) / 127.5
-			ff[(y*wanted_width+x)*3+2] = (float32(b)/256 - 127.5) / 127.5
+			var fr, fg, fb float32
+			if x < scaledWidth && y < scaledHeight {
+				r, g, b, _ := resized.At(x, y).RGBA()
+				fr = (float32(r)/256 - 127.5) / 127.5
+				fg = (float32(g)/256 - 127.5) / 127.5
+				fb = (float32(b)/256 - 127.5) / 127.5
+			}
+			ff[(y*wanted_width+x)*3+0] = fr
+			ff[(y*wanted_width+x)*3+1] = fg
+			ff[(y*wanted_width+x)*3+2] = fb
 		}
 	}
 
@@ -822,10 +844,8 @@ func estimateMultiplePoses(
 		scores, offsets, displacementsFwd, displacementsBwd, outputStride,
 		maxDetections, scoreThreshold, nmsRadius)
 
-	scaleY := float64(img.Bounds().Dy()) / float64(wanted_height)
-	scaleX := float64(img.Bounds().Dx()) / float64(wanted_width)
 	for i := 0; i < len(poses); i++ {
-		poses[i].scale(scaleX, scaleY)
+		poses[i].scale(1/scale, 1/scale)
 	}
 	return poses, nil
 }

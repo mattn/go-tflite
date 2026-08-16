@@ -24,7 +24,7 @@ const (
 )
 
 func loadDictionary(fname string) (map[string]int, error) {
-	f, err := os.Open("vocab.txt")
+	f, err := os.Open(fname)
 	if err != nil {
 		return nil, err
 	}

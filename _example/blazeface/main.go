@@ -165,7 +165,7 @@ func omitFaces(faces []face) []face {
 
 		if !ignore {
 			result = append(result, f1)
-			if len(result) > 20 {
+			if len(result) >= 20 {
 				break
 			}
 		}

@@ -34,6 +34,10 @@ var (
 	labelPath = flag.String("label", "labels.txt", "path to label file")
 )
 
+type result interface {
+	Image() image.Image
+}
+
 type quantUInt8Result struct {
 	output []byte
 	img    image.Image

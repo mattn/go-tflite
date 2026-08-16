@@ -54,8 +54,8 @@ func main() {
 			return
 		}
 		if dataURL.ContentType() != "image/png" {
-			log.Println(err)
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			log.Println("expected image/png")
+			http.Error(w, "expected image/png", http.StatusBadRequest)
 			return
 		}
 
@@ -73,10 +73,9 @@ func main() {
 				in[y*28+x] = (float32(b) + float32(g) + float32(r)) / 3.0 / 65535.0
 			}
 		}
-		status = interpreter.Invoke()
-		if status != tflite.OK {
+		if interpreter.Invoke() != tflite.OK {
 			log.Println("invoke failed")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "invoke failed", http.StatusInternalServerError)
 			return
 		}
 		fmt.Fprintf(w, "%v", argmax(output.Float32s()))

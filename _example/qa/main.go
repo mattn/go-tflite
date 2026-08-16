@@ -235,6 +235,10 @@ func convert(dic map[string]int32, query string, content string) *Feature {
 
 	inputIds := convertTokensToIds(dic, tokens)
 	inputMask := make([]int32, len(inputIds))
+	// Real tokens get attention mask 1; only the padding below stays 0.
+	for i := range inputMask {
+		inputMask[i] = 1
+	}
 
 	for len(inputIds) < MAX_SEQ_LEN {
 		inputIds = append(inputIds, 0)

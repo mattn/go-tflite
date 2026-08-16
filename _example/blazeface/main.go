@@ -64,20 +64,14 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 		}
 
 		resized := gocv.NewMat()
+		gocv.CvtColor(frame, &resized, gocv.ColorBGRToRGB)
+		gocv.Resize(resized, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
 		if input.Type() == tflite.Float32 {
-			frame.ConvertTo(&resized, gocv.MatTypeCV32F)
-			gocv.Resize(resized, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
-			ff, err := resized.DataPtrFloat32()
-			if err != nil {
-				fmt.Println(err)
-				continue
+			resized.ConvertToWithParams(&resized, gocv.MatTypeCV32F, 1/127.5, -1)
+			if ff, err := resized.DataPtrFloat32(); err == nil {
+				copy(input.Float32s(), ff)
 			}
-			for i := 0; i < len(ff); i++ {
-				ff[i] = (ff[i] - 127.5) / 127.5
-			}
-			copy(input.Float32s(), ff)
 		} else {
-			gocv.Resize(frame, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
 			if v, err := resized.DataPtrUint8(); err == nil {
 				copy(input.UInt8s(), v)
 			}

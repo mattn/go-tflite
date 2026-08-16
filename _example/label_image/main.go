@@ -94,9 +94,9 @@ func main() {
 			for x := 0; x < dx; x++ {
 				col := resized.At(x, y)
 				r, g, b, _ := col.RGBA()
-				bb[(y*dx+x)*3+0] = byte(float64(r) / 255.0)
-				bb[(y*dx+x)*3+1] = byte(float64(g) / 255.0)
-				bb[(y*dx+x)*3+2] = byte(float64(b) / 255.0)
+				bb[(y*dx+x)*3+0] = byte(r >> 8)
+				bb[(y*dx+x)*3+1] = byte(g >> 8)
+				bb[(y*dx+x)*3+2] = byte(b >> 8)
 			}
 		}
 		copy(input.UInt8s(), bb)

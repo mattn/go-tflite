@@ -150,7 +150,7 @@ func omitFaces(faces []face) []face {
 	var result []face
 
 	sort.Slice(faces, func(i, j int) bool {
-		return faces[i].score < faces[j].score
+		return faces[i].score > faces[j].score
 	})
 
 	for _, f1 := range faces {
@@ -296,10 +296,11 @@ func main() {
 			h /= float32(wanted_height)
 
 			faces = append(faces, face{
-				x1: (cx - w*0.5) * float32(size[1]),
-				y1: (cy - h*0.5) * float32(size[0]),
-				x2: (cx + w*0.5) * float32(size[1]),
-				y2: (cy + h*0.5) * float32(size[0]),
+				x1:    (cx - w*0.5) * float32(size[1]),
+				y1:    (cy - h*0.5) * float32(size[0]),
+				x2:    (cx + w*0.5) * float32(size[1]),
+				y2:    (cy + h*0.5) * float32(size[0]),
+				score: float32(score),
 			})
 		}
 		faces = omitFaces(faces)

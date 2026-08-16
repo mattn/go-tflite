@@ -8,6 +8,7 @@ require (
 	github.com/llgcode/draw2d v0.0.0-20260422081035-c4331ac66734
 	github.com/mattn/go-tflite v1.0.5
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
+	gocv.io/x/gocv v0.29.0
 )
 
 require (

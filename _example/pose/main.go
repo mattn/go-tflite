@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,11 +12,15 @@ import (
 	"log"
 	"math"
 	"os"
+	"os/signal"
+	"sync"
+	"time"
 
 	"github.com/llgcode/draw2d/draw2dimg"
 	"github.com/llgcode/draw2d/draw2dkit"
 	"github.com/mattn/go-tflite"
 	"github.com/nfnt/resize"
+	"gocv.io/x/gocv"
 )
 
 type vector2d struct {
@@ -182,6 +187,8 @@ var colors = [17]color.RGBA{
 	color.RGBA{R: 255, G: 255, B: 0, A: 255},
 }
 
+var boneColor = color.RGBA{R: 0, G: 192, B: 255, A: 255}
+
 func sigmoid(x float32) float32 {
 	return float32(1 / (1 + math.Exp(float64(x)*(-1))))
 }
@@ -190,21 +197,11 @@ const minPoseScore = 0.15
 const minPartScore = 0.5
 
 func main() {
-	var model_path, image_path string
+	var model_path, image_path, video_path string
 	flag.StringVar(&model_path, "model", "multi_person_mobilenet_v1_075_float.tflite", "path to model file")
-	flag.StringVar(&image_path, "image", "aa.png", "path to image file")
+	flag.StringVar(&image_path, "image", "", "path to image file; when set, writes output.png instead of using the camera")
+	flag.StringVar(&video_path, "camera", "0", "video capture source (device number or video file)")
 	flag.Parse()
-
-	f, err := os.Open(image_path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	img, _, err := image.Decode(f)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	model := tflite.NewModelFromFile(model_path)
 	if model == nil {
@@ -228,6 +225,25 @@ func main() {
 	if status != tflite.OK {
 		log.Println("allocate failed")
 		return
+	}
+
+	if image_path != "" {
+		runImage(interpreter, image_path)
+	} else {
+		runVideo(interpreter, video_path)
+	}
+}
+
+func runImage(interpreter *tflite.Interpreter, image_path string) {
+	f, err := os.Open(image_path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	img, _, err := image.Decode(f)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	poses, err := estimateMultiplePoses(
@@ -261,7 +277,7 @@ func main() {
 			if p1.score < minPartScore || p2.score < minPartScore {
 				continue
 			}
-			gc.SetStrokeColor(color.RGBA{R: 0, G: 192, B: 255, A: 255})
+			gc.SetStrokeColor(boneColor)
 			gc.MoveTo(p1.position.x, p1.position.y)
 			gc.LineTo(p2.position.x, p2.position.y)
 			gc.Stroke()
@@ -281,6 +297,144 @@ func main() {
 	if err != nil {
 		log.Println(err)
 	}
+}
+
+type poseResult struct {
+	poses []pose
+	mat   gocv.Mat
+}
+
+func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *poseResult, interpreter *tflite.Interpreter, cam *gocv.VideoCapture) {
+	defer wg.Done()
+	defer close(resultChan)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		frame := gocv.NewMat()
+		if ok := cam.Read(&frame); !ok {
+			frame.Close()
+			break
+		}
+
+		img, err := frame.ToImage()
+		if err != nil {
+			frame.Close()
+			continue
+		}
+
+		poses, err := estimateMultiplePoses(interpreter, img, 5, 0.5, 20)
+		if err != nil {
+			frame.Close()
+			log.Println(err)
+			return
+		}
+
+		resultChan <- &poseResult{poses: poses, mat: frame}
+	}
+}
+
+func drawPoses(mat *gocv.Mat, poses []pose) {
+	for _, pose := range poses {
+		if pose.score < minPoseScore {
+			continue
+		}
+		for _, pair := range parentChildrenTuples {
+			p1 := pose.keypoints[pair[0]]
+			p2 := pose.keypoints[pair[1]]
+			if p1.score < minPartScore || p2.score < minPartScore {
+				continue
+			}
+			gocv.Line(mat,
+				image.Pt(int(p1.position.x), int(p1.position.y)),
+				image.Pt(int(p2.position.x), int(p2.position.y)),
+				boneColor, 2)
+		}
+		for i, keypoint := range pose.keypoints {
+			if keypoint.score < minPartScore {
+				continue
+			}
+			gocv.Circle(mat,
+				image.Pt(int(keypoint.position.x), int(keypoint.position.y)),
+				4, colors[i], -1)
+		}
+	}
+}
+
+func runVideo(interpreter *tflite.Interpreter, video_path string) {
+	cam, err := gocv.OpenVideoCapture(video_path)
+	if err != nil {
+		log.Printf("cannot open camera: %v", err)
+		return
+	}
+	defer cam.Close()
+
+	window := gocv.NewWindow("Pose")
+	defer window.Close()
+	window.ResizeWindow(
+		int(cam.Get(gocv.VideoCaptureFrameWidth)),
+		int(cam.Get(gocv.VideoCaptureFrameHeight)),
+	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	resultChan := make(chan *poseResult, 1)
+	go detect(ctx, &wg, resultChan, interpreter, cam)
+
+	sc := make(chan os.Signal, 1)
+	defer close(sc)
+	signal.Notify(sc, os.Interrupt)
+	go func() {
+		<-sc
+		cancel()
+	}()
+
+	frames := 0
+	second := time.Tick(time.Second)
+
+	for {
+		result, ok := <-resultChan
+		if !ok {
+			break
+		}
+
+		drawPoses(&result.mat, result.poses)
+
+		window.IMShow(result.mat)
+		result.mat.Close()
+
+		k := window.WaitKey(1)
+		if k == 0x1b {
+			break
+		}
+		if window.GetWindowProperty(gocv.WindowPropertyVisible) == 0 {
+			break
+		}
+
+		frames++
+		select {
+		case <-second:
+			window.SetWindowTitle(fmt.Sprintf("Pose | FPS: %d", frames))
+			frames = 0
+		default:
+		}
+	}
+
+	cancel()
+	for {
+		if result, ok := <-resultChan; ok {
+			result.mat.Close()
+		} else {
+			break
+		}
+	}
+	wg.Wait()
 }
 
 func getOffsetPoint(y int, x int, i int, offsets *tensorData) vector2d {

@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -41,8 +43,10 @@ type ssdClass struct {
 	index int
 }
 
-func loadLabels(filename string) ([]string, error) {
-	labels := []string{}
+// loadLabels reads a label file whose lines are "<id> <name>" pairs. The ids
+// are not contiguous, so the labels are keyed by id rather than line number.
+func loadLabels(filename string) (map[int]string, error) {
+	labels := map[int]string{}
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -50,7 +54,15 @@ func loadLabels(filename string) ([]string, error) {
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		labels = append(labels, scanner.Text())
+		fields := strings.Fields(scanner.Text())
+		if len(fields) < 2 {
+			continue
+		}
+		id, err := strconv.Atoi(fields[0])
+		if err != nil {
+			continue
+		}
+		labels[id] = strings.Join(fields[1:], " ")
 	}
 	return labels, nil
 }
@@ -91,14 +103,14 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 		}
 
 		resized := gocv.NewMat()
+		gocv.CvtColor(frame, &resized, gocv.ColorBGRToRGB)
+		gocv.Resize(resized, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
 		if input.Type() == tflite.Float32 {
-			frame.ConvertTo(&resized, gocv.MatTypeCV32F)
-			gocv.Resize(resized, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
+			resized.ConvertToWithParams(&resized, gocv.MatTypeCV32F, 1/127.5, -1)
 			if ff, err := resized.DataPtrFloat32(); err == nil {
 				copy(input.Float32s(), ff)
 			}
 		} else {
-			gocv.Resize(frame, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
 			if v, err := resized.DataPtrUint8(); err == nil {
 				copy(input.UInt8s(), v)
 			}
@@ -244,8 +256,8 @@ func main() {
 		size := result.mat.Size()
 		for i, class := range classes {
 			label := "unknown"
-			if class.index < len(labels) {
-				label = labels[class.index]
+			if l, ok := labels[class.index]; ok {
+				label = l
 			}
 			c := colornames.Map[colornames.Names[class.index%len(colornames.Names)]]
 			gocv.Rectangle(&result.mat, image.Rect(

@@ -164,7 +164,7 @@ func main() {
 					}
 				}
 				c := colors[ci]
-				canvas.Set(x, y, color.RGBA{R: c[0], G: c[1], B: c[2], A: 100})
+				canvas.Set(x, y, color.NRGBA{R: c[0], G: c[1], B: c[2], A: 100})
 			}
 		}
 

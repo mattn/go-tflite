@@ -9,6 +9,8 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/mattn/go-tflite"
 	"github.com/mattn/go-tflite/delegates/edgetpu"
@@ -17,14 +19,22 @@ import (
 
 func loadLabels(filename string) ([]string, error) {
 	labels := []string{}
-	f, err := os.Open("labels.txt")
+	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		labels = append(labels, scanner.Text())
+		// imagenet_labels.txt lines are "<id>  <name>" pairs with contiguous
+		// ids, so strip the id prefix and keep the line order.
+		fields := strings.Fields(scanner.Text())
+		if len(fields) >= 2 {
+			if _, err := strconv.Atoi(fields[0]); err == nil {
+				fields = fields[1:]
+			}
+		}
+		labels = append(labels, strings.Join(fields, " "))
 	}
 	return labels, nil
 }

@@ -1,10 +1,12 @@
+github.com/hybridgroup/mjpeg v0.0.0-20140228234708-4680f319790e/go.mod h1:eagM805MRKrioHYuU7iKLUyFPVKqVV6um5DAvCkUtXs=
 github.com/mattn/go-pointer v0.0.1 h1:n+XhsuGeVO6MEAp7xyEukFINEa+Quek5psIR/ylA6o0=
 github.com/mattn/go-pointer v0.0.1/go.mod h1:2zXcozF6qYGgmsG+SeTZz3oAbFLdD3OWqnUbNvJZAlc=
-github.com/mattn/go-sixel v0.0.11 h1:+1qa839dVz5UxA0w/gQBbC1+5hb1b6DSAidf+caN63s=
-github.com/mattn/go-sixel v0.0.11/go.mod h1:UzxovwVMmjEBx5ui3fav05lfRkxNiaLLDJuOkanrVOI=
+github.com/mattn/go-sixel v0.0.12 h1:pQadX/oJ4fhSi6RnFHggWELW1TvADrQP9b+Kdx1wNzs=
+github.com/mattn/go-sixel v0.0.12/go.mod h1:Z5QJ/vRbnpAl4CTN0NZ0mzURdMccsG7rpGZ5eJfZ6ys=
+github.com/pascaldekloe/goe v0.1.0/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/soniakeys/quant v1.0.0 h1:N1um9ktjbkZVcywBVAAYpZYSHxEfJGzshHCxx/DaI0Y=
 github.com/soniakeys/quant v1.0.0/go.mod h1:HI1k023QuVbD4H8i9YdfZP2munIHU4QpjsImz6Y6zds=
-gocv.io/x/gocv v0.43.0 h1:PFNpRUcV8fgBRDbVHHN+4BDZjjPnVveo5N/+e15BTuA=
-gocv.io/x/gocv v0.43.0/go.mod h1:zYdWMj29WAEznM3Y8NsU3A0TRq/wR/cy75jeUypThqU=
+gocv.io/x/gocv v0.29.0 h1:Zg5ZoIFSY4oBehoIRoSaSeY+KF+nvqv1O1qNmALiMec=
+gocv.io/x/gocv v0.29.0/go.mod h1:oc6FvfYqfBp99p+yOEzs9tbYF9gOrAQSeL/dyIPefJU=
 golang.org/x/image v0.43.0 h1:FLxcP4ec2350nTfOC8ysKtqYSIFbk/QGjw1ZHNP4tsY=
 golang.org/x/image v0.43.0/go.mod h1:rrpelvGFt+kLPAjPM4HeWPgrl0FtafueU//e5N0qk/Q=

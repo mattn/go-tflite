@@ -1,13 +1,13 @@
-module github.com/mattn/go-tflite/_example/ssd
+module github.com/mattn/go-tflite/_example/ssd_sixel
 
 go 1.25.0
 
 replace github.com/mattn/go-tflite => ../..
 
 require (
-	github.com/mattn/go-sixel v0.0.11
+	github.com/mattn/go-sixel v0.0.12
 	github.com/mattn/go-tflite v1.0.5
-	gocv.io/x/gocv v0.43.0
+	gocv.io/x/gocv v0.29.0
 	golang.org/x/image v0.43.0
 )
 

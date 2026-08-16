@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"image"
@@ -55,6 +56,40 @@ type partWithScore struct {
 	part  part
 }
 
+// tensorData is a view of a NHWC float32 tensor. channelOffset/channelStride
+// allow addressing a channel range inside a wider tensor, which is needed for
+// models that pack displacement_fwd and displacement_bwd into a single
+// mid_offsets tensor.
+type tensorData struct {
+	data          []float32
+	height        int
+	width         int
+	depth         int
+	channelOffset int
+	channelStride int
+}
+
+func newTensorData(t *tflite.Tensor) *tensorData {
+	return &tensorData{
+		data:          t.Float32s(),
+		height:        t.Dim(1),
+		width:         t.Dim(2),
+		depth:         t.Dim(3),
+		channelStride: t.Dim(3),
+	}
+}
+
+func (td *tensorData) slice(offset, depth int) *tensorData {
+	sliced := *td
+	sliced.channelOffset += offset
+	sliced.depth = depth
+	return &sliced
+}
+
+func (td *tensorData) at(y, x, c int) float64 {
+	return float64(td.data[(y*td.width+x)*td.channelStride+td.channelOffset+c])
+}
+
 func squaredDistance(x1, y1, x2, y2 float64) float64 {
 	dy := y2 - y1
 	dx := x2 - x1
@@ -79,17 +114,17 @@ func min(a, b int) int {
 	return b
 }
 
-func scoreIsMaximumInLocalWindow(id int, score float64, y int, x int, r int, scores *tflite.Tensor) bool {
+func scoreIsMaximumInLocalWindow(id int, score float64, y int, x int, r int, scores *tensorData) bool {
 	minmax := true
 	ys := max(y-r, 0)
-	ye := min(y+r+1, scores.Dim(1))
+	ye := min(y+r+1, scores.height)
 
 loop:
 	for yc := ys; yc < ye; yc++ {
 		xs := max(x-r, 0)
-		xe := min(x+r+1, scores.Dim(2))
+		xe := min(x+r+1, scores.width)
 		for xc := xs; xc < xe; xc++ {
-			if float64(scores.Float32At(0, yc, xc, id)) > score {
+			if scores.at(yc, xc, id) > score {
 				minmax = false
 				break loop
 			}
@@ -103,13 +138,13 @@ loop:
  * the batch. For this we find all local maxima in the score maps with score
  * values above a threshold. We create a single priority queue across all parts.
  */
-func buildPartWithScoreQueue(scoreThreshold float64, r int, scores *tflite.Tensor) *MaxHeap {
-	queue := NewMaxHeap(scores.Dim(1) * scores.Dim(2) * scores.Dim(3))
+func buildPartWithScoreQueue(scoreThreshold float64, r int, scores *tensorData) *MaxHeap {
+	queue := NewMaxHeap(scores.height * scores.width * scores.depth)
 
-	for y := 0; y < scores.Dim(1); y++ {
-		for x := 0; x < scores.Dim(2); x++ {
-			for i := 0; i < scores.Dim(3); i++ {
-				score := float64(scores.Float32At(0, y, x, i))
+	for y := 0; y < scores.height; y++ {
+		for x := 0; x < scores.width; x++ {
+			for i := 0; i < scores.depth; i++ {
+				score := scores.at(y, x, i)
 
 				// Only consider parts with score greater or equal to threshold as
 				// root candidates.
@@ -127,55 +162,32 @@ func buildPartWithScoreQueue(scoreThreshold float64, r int, scores *tflite.Tenso
 	return queue
 }
 
-var colors = [21]color.RGBA{
-	color.RGBA{R: 0, G: 0, B: 0, A: 100},
-	color.RGBA{R: 128, G: 0, B: 0, A: 100},
-	color.RGBA{R: 0, G: 128, B: 0, A: 100},
-	color.RGBA{R: 128, G: 128, B: 0, A: 100},
-	color.RGBA{R: 0, G: 0, B: 128, A: 100},
-	color.RGBA{R: 128, G: 0, B: 128, A: 100},
-	color.RGBA{R: 0, G: 128, B: 128, A: 100},
-	color.RGBA{R: 128, G: 128, B: 128, A: 100},
-	color.RGBA{R: 64, G: 0, B: 0, A: 100},
-	color.RGBA{R: 192, G: 0, B: 0, A: 100},
-	color.RGBA{R: 64, G: 128, B: 0, A: 100},
-	color.RGBA{R: 192, G: 128, B: 0, A: 100},
-	color.RGBA{R: 64, G: 0, B: 128, A: 100},
-	color.RGBA{R: 192, G: 0, B: 128, A: 100},
-	color.RGBA{R: 64, G: 128, B: 128, A: 100},
-	color.RGBA{R: 192, G: 128, B: 128, A: 100},
-	color.RGBA{R: 0, G: 64, B: 0, A: 100},
-	color.RGBA{R: 128, G: 64, B: 0, A: 100},
-	color.RGBA{R: 0, G: 192, B: 0, A: 100},
-	color.RGBA{R: 128, G: 192, B: 0, A: 100},
-	color.RGBA{R: 0, G: 64, B: 128, A: 100},
-}
-
-type Circle struct {
-	p image.Point
-	r int
-	c color.Color
-}
-
-func (c *Circle) ColorModel() color.Model {
-	return color.AlphaModel
-}
-
-func (c *Circle) Bounds() image.Rectangle {
-	return image.Rect(c.p.X-c.r, c.p.Y-c.r, c.p.X+c.r, c.p.Y+c.r)
-}
-
-func (c *Circle) At(x, y int) color.Color {
-	xx, yy, rr := float64(x-c.p.X)+0.5, float64(y-c.p.Y)+0.5, float64(c.r)
-	if xx*xx+yy*yy < rr*rr {
-		return c.c
-	}
-	return color.Alpha{0}
+var colors = [17]color.RGBA{
+	color.RGBA{R: 255, G: 0, B: 0, A: 255},
+	color.RGBA{R: 255, G: 128, B: 0, A: 255},
+	color.RGBA{R: 255, G: 0, B: 128, A: 255},
+	color.RGBA{R: 255, G: 192, B: 0, A: 255},
+	color.RGBA{R: 255, G: 0, B: 192, A: 255},
+	color.RGBA{R: 0, G: 255, B: 0, A: 255},
+	color.RGBA{R: 0, G: 255, B: 128, A: 255},
+	color.RGBA{R: 128, G: 255, B: 0, A: 255},
+	color.RGBA{R: 0, G: 255, B: 192, A: 255},
+	color.RGBA{R: 192, G: 255, B: 0, A: 255},
+	color.RGBA{R: 0, G: 255, B: 255, A: 255},
+	color.RGBA{R: 0, G: 0, B: 255, A: 255},
+	color.RGBA{R: 128, G: 0, B: 255, A: 255},
+	color.RGBA{R: 0, G: 128, B: 255, A: 255},
+	color.RGBA{R: 192, G: 0, B: 255, A: 255},
+	color.RGBA{R: 0, G: 192, B: 255, A: 255},
+	color.RGBA{R: 255, G: 255, B: 0, A: 255},
 }
 
 func sigmoid(x float32) float32 {
 	return float32(1 / (1 + math.Exp(float64(x)*(-1))))
 }
+
+const minPoseScore = 0.15
+const minPartScore = 0.5
 
 func main() {
 	var model_path, image_path string
@@ -218,21 +230,14 @@ func main() {
 		return
 	}
 
-	poses := estimateMultiplePoses(
+	poses, err := estimateMultiplePoses(
 		interpreter,
 		img,
-		0.5,
-		false,
-		16,
 		5,
 		0.5,
-		30)
-
-	for _, pose := range poses {
-		for _, keypoint := range pose.keypoints {
-			fmt.Println(keypoint.part)
-			fmt.Println(keypoint.score, keypoint.position.x, keypoint.position.y)
-		}
+		20)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	canvas := image.NewRGBA(img.Bounds())
@@ -240,82 +245,36 @@ func main() {
 	gc.DrawImage(img)
 
 	for _, pose := range poses {
-		pos := func(i int) (float64, float64) {
-			p := pose.keypoints[i].position
-			return float64(p.x), float64(p.y)
+		if pose.score < minPoseScore {
+			continue
 		}
-		center := func(i, j int) (float64, float64) {
-			p1 := pose.keypoints[i].position
-			p2 := pose.keypoints[j].position
-			x := (p1.x + p2.x) / 2
-			y := (p1.y + p2.y) / 2
-			return float64(x), float64(y)
+		fmt.Printf("pose score=%f\n", pose.score)
+		for _, keypoint := range pose.keypoints {
+			fmt.Printf("  %-13s score=%f x=%.1f y=%.1f\n",
+				keypoint.part, keypoint.score, keypoint.position.x, keypoint.position.y)
 		}
 
-		for i := range pose.keypoints {
-			x, y := pos(i)
+		gc.SetLineWidth(3)
+		for _, pair := range parentChildrenTuples {
+			p1 := pose.keypoints[pair[0]]
+			p2 := pose.keypoints[pair[1]]
+			if p1.score < minPartScore || p2.score < minPartScore {
+				continue
+			}
+			gc.SetStrokeColor(color.RGBA{R: 0, G: 192, B: 255, A: 255})
+			gc.MoveTo(p1.position.x, p1.position.y)
+			gc.LineTo(p2.position.x, p2.position.y)
+			gc.Stroke()
+		}
+
+		for i, keypoint := range pose.keypoints {
+			if keypoint.score < minPartScore {
+				continue
+			}
 			gc.SetFillColor(colors[i])
-			draw2dkit.RoundedRectangle(gc, x-5, y-5, x+5, y+5, 10, 10)
+			draw2dkit.Circle(gc, keypoint.position.x, keypoint.position.y, 4)
 			gc.Fill()
 		}
-		gc.SetLineWidth(5)
-		gc.SetStrokeColor(colors[2])
-
-		gc.MoveTo(pos(0))
-		gc.LineTo(pos(1))
-		gc.LineTo(pos(3))
-		gc.Stroke()
-		gc.Close()
-
-		gc.MoveTo(pos(0))
-		gc.LineTo(pos(2))
-		gc.LineTo(pos(4))
-		gc.Stroke()
-		gc.Close()
-
-		gc.MoveTo(pos(0))
-		gc.LineTo(center(5, 6))
-		gc.Stroke()
-		gc.Close()
-
-		gc.MoveTo(center(5, 6))
-		gc.LineTo(pos(5))
-		gc.LineTo(pos(7))
-		gc.LineTo(pos(9))
-		gc.Stroke()
-		gc.Close()
-
-		gc.MoveTo(center(5, 6))
-		gc.LineTo(pos(6))
-		gc.LineTo(pos(8))
-		gc.LineTo(pos(10))
-		gc.Stroke()
-		gc.Close()
-
-		gc.MoveTo(center(5, 6))
-		gc.LineTo(center(11, 12))
-		gc.Stroke()
-		gc.Close()
-
-		gc.MoveTo(center(11, 12))
-		gc.LineTo(pos(11))
-		gc.LineTo(pos(13))
-		if len(pose.keypoints) > 15 {
-			gc.LineTo(pos(15))
-		}
-		gc.Stroke()
-		gc.Close()
-
-		gc.MoveTo(center(11, 12))
-		gc.LineTo(pos(12))
-		if len(pose.keypoints) > 14 {
-			gc.LineTo(pos(14))
-		}
-		if len(pose.keypoints) > 16 {
-			gc.LineTo(pos(16))
-		}
-		gc.Stroke()
-		gc.Close()
 	}
 
 	err = draw2dimg.SaveToPngFile("output.png", canvas)
@@ -324,38 +283,20 @@ func main() {
 	}
 }
 
-func getOffsetPoint(y int, x int, i int, offsets *tflite.Tensor) vector2d {
+func getOffsetPoint(y int, x int, i int, offsets *tensorData) vector2d {
+	numParts := offsets.depth / 2
 	return vector2d{
-		y: float64(offsets.Float32At(0, y, x, i)),
-		x: float64(offsets.Float32At(0, y, x, i+17)),
+		y: offsets.at(y, x, i),
+		x: offsets.at(y, x, i+numParts),
 	}
 }
 
-func getImageCoords(p part, outputStride int, offsets *tflite.Tensor) vector2d {
+func getImageCoords(p part, outputStride int, offsets *tensorData) vector2d {
 	pos := getOffsetPoint(p.y, p.x, p.id, offsets)
 	return vector2d{
 		x: float64(p.x*outputStride) + pos.x,
 		y: float64(p.y*outputStride) + pos.y,
 	}
-}
-
-var poseChain = [][2]string{
-	{"nose", "leftEye"},
-	{"leftEye", "leftEar"},
-	{"nose", "rightEye"},
-	{"rightEye", "rightEar"},
-	{"nose", "leftShoulder"},
-	{"leftShoulder", "leftElbow"},
-	{"leftElbow", "leftWrist"},
-	{"leftShoulder", "leftHip"},
-	{"leftHip", "leftKnee"},
-	{"leftKnee", "leftAnkle"},
-	{"nose", "rightShoulder"},
-	{"rightShoulder", "rightElbow"},
-	{"rightElbow", "rightWrist"},
-	{"rightShoulder", "rightHip"},
-	{"rightHip", "rightKnee"},
-	{"rightKnee", "rightAnkle"},
 }
 
 var partNames = []string{
@@ -376,26 +317,6 @@ var partNames = []string{
 	"rightKnee",
 	"leftAnkle",
 	"rightAnkle",
-}
-
-var partIds = map[string]int{
-	"nose":          0,
-	"leftEye":       1,
-	"rightEye":      2,
-	"leftEar":       3,
-	"rightEar":      4,
-	"leftShoulder":  5,
-	"rightShoulder": 6,
-	"leftElbow":     7,
-	"rightElbow":    8,
-	"leftWrist":     9,
-	"rightWrist":    10,
-	"leftHip":       11,
-	"rightHip":      12,
-	"leftKnee":      13,
-	"rightKnee":     14,
-	"leftAnkle":     15,
-	"rightAnkle":    16,
 }
 
 var parentChildrenTuples = [][2]int{
@@ -421,21 +342,7 @@ var parentToChildEdges = []int{1, 3, 2, 4, 5, 7, 9, 11, 13, 15, 6, 8, 10, 12, 14
 
 var childToParentEdges = []int{0, 1, 0, 2, 0, 5, 7, 5, 11, 13, 0, 6, 8, 6, 12, 14}
 
-func round(f float64) float64 {
-	return float64(math.Round(float64(f)))
-}
-
 func clamp(a, min, max float64) float64 {
-	if a < min {
-		return min
-	}
-	if a > max {
-		return max
-	}
-	return a
-}
-
-func clampint(a, min, max int) int {
 	if a < min {
 		return min
 	}
@@ -447,35 +354,38 @@ func clampint(a, min, max int) int {
 
 func getStridedIndexNearPoint(point vector2d, outputStride int, height int, width int) vector2d {
 	return vector2d{
-		y: clamp(point.y/float64(outputStride), 0, float64(height-1)),
-		x: clamp(point.x/float64(outputStride), 0, float64(width-1)),
+		y: clamp(math.Round(point.y/float64(outputStride)), 0, float64(height-1)),
+		x: clamp(math.Round(point.x/float64(outputStride)), 0, float64(width-1)),
 	}
 }
 
-func getDisplacement(edgeId int, point vector2d, displacements *tflite.Tensor) vector2d {
-	numEdges := displacements.Dim(3) / 2
+func getDisplacement(edgeId int, point vector2d, displacements *tensorData) vector2d {
+	numEdges := displacements.depth / 2
 	return vector2d{
-		y: float64(displacements.Float32At(0, int(point.y), int(point.x), edgeId)),
-		x: float64(displacements.Float32At(0, int(point.y), int(point.x), edgeId+numEdges)),
+		y: displacements.at(int(point.y), int(point.x), edgeId),
+		x: displacements.at(int(point.y), int(point.x), edgeId+numEdges),
 	}
 }
 
-func roundint(f float64) int {
-	return int(math.Round(float64(f)))
-}
+const offsetRefineStep = 2
 
-func traverseToTargetKeypoint(edgeId int, sourceKeypoint *keypoint, targetKeypointId int, scores, offsets *tflite.Tensor, outputStride int, displacements *tflite.Tensor) *keypoint {
-	height := scores.Dim(1)
-	width := scores.Dim(2)
+func traverseToTargetKeypoint(edgeId int, sourceKeypoint *keypoint, targetKeypointId int, scores, offsets *tensorData, outputStride int, displacements *tensorData) *keypoint {
+	height := scores.height
+	width := scores.width
 	// Nearest neighbor interpolation for the source->target displacements.
 	sourceKeypointIndices := getStridedIndexNearPoint(sourceKeypoint.position, outputStride, height, width)
 	displacement := getDisplacement(edgeId, sourceKeypointIndices, displacements)
-	var displacedPoint = addVectors(sourceKeypoint.position, displacement)
-	var displacedPointIndices = getStridedIndexNearPoint(displacedPoint, outputStride, height, width)
-	var offsetPoint = getOffsetPoint(roundint(displacedPointIndices.y), roundint(displacedPointIndices.x), targetKeypointId, offsets)
-	var score = float64(scores.Float32At(0, roundint(displacedPointIndices.y), roundint(displacedPointIndices.x), targetKeypointId))
-	displacedPointIndices.scale(float64(outputStride), float64(outputStride))
-	var targetKeypoint = addVectors(displacedPointIndices, offsetPoint)
+	targetKeypoint := addVectors(sourceKeypoint.position, displacement)
+	for i := 0; i < offsetRefineStep; i++ {
+		targetKeypointIndices := getStridedIndexNearPoint(targetKeypoint, outputStride, height, width)
+		offsetPoint := getOffsetPoint(int(targetKeypointIndices.y), int(targetKeypointIndices.x), targetKeypointId, offsets)
+		targetKeypoint = addVectors(vector2d{
+			x: targetKeypointIndices.x * float64(outputStride),
+			y: targetKeypointIndices.y * float64(outputStride),
+		}, offsetPoint)
+	}
+	targetKeypointIndices := getStridedIndexNearPoint(targetKeypoint, outputStride, height, width)
+	score := scores.at(int(targetKeypointIndices.y), int(targetKeypointIndices.x), targetKeypointId)
 	return &keypoint{
 		position: targetKeypoint,
 		part:     partNames[targetKeypointId],
@@ -485,13 +395,13 @@ func traverseToTargetKeypoint(edgeId int, sourceKeypoint *keypoint, targetKeypoi
 
 func decodePose(
 	root *partWithScore,
-	scores *tflite.Tensor,
-	offsets *tflite.Tensor,
+	scores *tensorData,
+	offsets *tensorData,
 	outputStride int,
-	displacementsFwd *tflite.Tensor,
-	displacementsBwd *tflite.Tensor) []*keypoint {
+	displacementsFwd *tensorData,
+	displacementsBwd *tensorData) []*keypoint {
 
-	numParts := scores.Dim(3)
+	numParts := scores.depth
 	numEdges := len(parentToChildEdges)
 
 	instanceKeypoints := make([]*keypoint, numParts)
@@ -640,10 +550,10 @@ func (h *MaxHeap) exchange(i, j int) {
 }
 
 func decodeMultiplePoses(
-	scores *tflite.Tensor,
-	offsets *tflite.Tensor,
-	displacementsFwd *tflite.Tensor,
-	displacementsBwd *tflite.Tensor,
+	scores *tensorData,
+	offsets *tensorData,
+	displacementsFwd *tensorData,
+	displacementsBwd *tensorData,
 	outputStride int,
 	maxPoseDetections int,
 	scoreThreshold float64,
@@ -680,40 +590,61 @@ func decodeMultiplePoses(
 	return poses
 }
 
-func getValidResolution(imageScaleFactor float64, inputDimension int, outputStride int) int {
-	evenResolution := int(float64(inputDimension)*imageScaleFactor - 1)
-	return evenResolution - evenResolution%outputStride + 1
+func sigmoidTensorData(td *tensorData) {
+	for i, f := range td.data {
+		td.data[i] = sigmoid(f)
+	}
 }
 
-func sigmoidTensor(t *tflite.Tensor) {
-	fs := t.Float32s()
-	for i, f := range fs {
-		fs[i] = sigmoid(f)
+// findOutputTensors locates the heatmap, offset and displacement tensors by
+// their channel counts, so both flavors of the PoseNet model work: models with
+// separate displacement_fwd/displacement_bwd tensors (2*16 channels each), and
+// models with a single mid_offsets tensor packing both (4*16 channels).
+func findOutputTensors(interpreter *tflite.Interpreter) (scores, offsets, displacementsFwd, displacementsBwd *tensorData, err error) {
+	numParts := len(partNames)
+	numEdges := len(parentToChildEdges)
+	for i := 0; i < interpreter.GetOutputTensorCount(); i++ {
+		t := interpreter.GetOutputTensor(i)
+		if t.NumDims() != 4 || t.Type() != tflite.Float32 {
+			continue
+		}
+		switch t.Dim(3) {
+		case numParts:
+			scores = newTensorData(t)
+		case 2 * numParts:
+			offsets = newTensorData(t)
+		case 2 * numEdges:
+			if displacementsFwd == nil {
+				displacementsFwd = newTensorData(t)
+			} else {
+				displacementsBwd = newTensorData(t)
+			}
+		case 4 * numEdges:
+			midOffsets := newTensorData(t)
+			displacementsFwd = midOffsets.slice(0, 2*numEdges)
+			displacementsBwd = midOffsets.slice(2*numEdges, 2*numEdges)
+		}
 	}
+	if scores == nil || offsets == nil || displacementsFwd == nil || displacementsBwd == nil {
+		return nil, nil, nil, nil, errors.New("unexpected model outputs: not a PoseNet model?")
+	}
+	return scores, offsets, displacementsFwd, displacementsBwd, nil
 }
 
 func estimateMultiplePoses(
 	interpreter *tflite.Interpreter,
-	img image.Image, imageScaleFactor float64, flipHorizontal bool,
-	outputStride int, maxDetections int, scoreThreshold float64,
-	nmsRadius int) []pose {
-
-	height := img.Bounds().Dy()
-	width := img.Bounds().Dx()
+	img image.Image, maxDetections int, scoreThreshold float64,
+	nmsRadius int) ([]pose, error) {
 
 	input := interpreter.GetInputTensor(0)
 	wanted_height := input.Dim(1)
 	wanted_width := input.Dim(2)
 
-	resizedHeight := getValidResolution(imageScaleFactor, height, outputStride)
-	resizedWidth := getValidResolution(imageScaleFactor, width, outputStride)
-
-	resized := resize.Resize(uint(resizedWidth), uint(resizedHeight), img, resize.Bilinear)
+	resized := resize.Resize(uint(wanted_width), uint(wanted_height), img, resize.Bilinear)
 	ff := input.Float32s()
 	for y := 0; y < wanted_height; y++ {
 		for x := 0; x < wanted_width; x++ {
-			col := resized.At(x, y)
-			r, g, b, _ := col.RGBA()
+			r, g, b, _ := resized.At(x, y).RGBA()
 			ff[(y*wanted_width+x)*3+0] = (float32(r)/256 - 127.5) / 127.5
 			ff[(y*wanted_width+x)*3+1] = (float32(g)/256 - 127.5) / 127.5
 			ff[(y*wanted_width+x)*3+2] = (float32(b)/256 - 127.5) / 127.5
@@ -722,23 +653,25 @@ func estimateMultiplePoses(
 
 	status := interpreter.Invoke()
 	if status != tflite.OK {
-		log.Println("invoke failed")
-		return nil
+		return nil, errors.New("invoke failed")
 	}
-	scores := interpreter.GetOutputTensor(0)
-	offsets := interpreter.GetOutputTensor(1)
-	displacementFwd := interpreter.GetOutputTensor(2)
-	displacementBwd := interpreter.GetOutputTensor(3)
-	sigmoidTensor(scores)
+
+	scores, offsets, displacementsFwd, displacementsBwd, err := findOutputTensors(interpreter)
+	if err != nil {
+		return nil, err
+	}
+	sigmoidTensorData(scores)
+
+	outputStride := (wanted_height - 1) / (scores.height - 1)
 
 	poses := decodeMultiplePoses(
-		scores, offsets, displacementFwd, displacementBwd, outputStride,
+		scores, offsets, displacementsFwd, displacementsBwd, outputStride,
 		maxDetections, scoreThreshold, nmsRadius)
 
-	scaleY := float64(img.Bounds().Dy()) / float64(resizedHeight)
-	scaleX := float64(img.Bounds().Dx()) / float64(resizedWidth)
+	scaleY := float64(img.Bounds().Dy()) / float64(wanted_height)
+	scaleX := float64(img.Bounds().Dx()) / float64(wanted_width)
 	for i := 0; i < len(poses); i++ {
 		poses[i].scale(scaleX, scaleY)
 	}
-	return poses
+	return poses, nil
 }

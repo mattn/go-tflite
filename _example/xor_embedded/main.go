@@ -31,6 +31,6 @@ func main() {
 		interpreter.Invoke()
 		output := interpreter.GetOutputTensor(0)
 		got := output.Float32s()
-		fmt.Printf("%d xor %d = %d\n", int(v[0]), int(v[1]), int(math.Ceil(float64(got[0]))))
+		fmt.Printf("%d xor %d = %d\n", int(v[0]), int(v[1]), int(math.Round(float64(got[0]))))
 	}
 }

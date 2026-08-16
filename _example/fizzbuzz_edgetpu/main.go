@@ -18,12 +18,13 @@ func bin(n int, num_digits int) []uint8 {
 }
 
 func dec(b []uint8) int {
-	for i := 0; i < len(b); i++ {
-		if b[i] > 100 {
-			return i
+	t := 0
+	for i := 1; i < len(b); i++ {
+		if b[i] > b[t] {
+			t = i
 		}
 	}
-	panic("Sorry, I'm wrong")
+	return t
 }
 
 func display(v []uint8, i int) {

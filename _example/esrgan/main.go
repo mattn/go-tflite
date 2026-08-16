@@ -70,9 +70,9 @@ func main() {
 		for x := 0; x < dx; x++ {
 			col := resized.At(x, y)
 			r, g, b, _ := col.RGBA()
-			ff[(y*dx+x)*3+0] = float32(r)
-			ff[(y*dx+x)*3+1] = float32(g)
-			ff[(y*dx+x)*3+2] = float32(b)
+			ff[(y*dx+x)*3+0] = float32(r >> 8)
+			ff[(y*dx+x)*3+1] = float32(g >> 8)
+			ff[(y*dx+x)*3+2] = float32(b >> 8)
 		}
 	}
 

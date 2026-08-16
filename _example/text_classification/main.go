@@ -105,6 +105,12 @@ func main() {
 				break
 			}
 
+			// The vocabulary is all lower case, and splitting on punctuation
+			// leaves empty fragments that must not become <UNKNOWN> tokens.
+			word = strings.ToLower(word)
+			if word == "" {
+				continue
+			}
 			if v, ok := dic[word]; ok {
 				tmp[index] = float32(v)
 			} else {

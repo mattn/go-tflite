@@ -32,7 +32,7 @@ func loadLabels(filename string) ([]string, error) {
 func main() {
 	var model_path, label_path, image_path string
 	var verbosity int
-	flag.StringVar(&model_path, "model", "mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite", "path to model file")
+	flag.StringVar(&model_path, "model", "mobilenet_v2_1.0_224_quant_edgetpu.tflite", "path to model file")
 	flag.StringVar(&label_path, "label", "labels.txt", "path to label file")
 	flag.StringVar(&image_path, "image", "grace_hopper.jpg", "path to image file")
 	flag.IntVar(&verbosity, "verbosity", 0, "Edge TPU Verbosity")

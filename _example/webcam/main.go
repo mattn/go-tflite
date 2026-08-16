@@ -394,12 +394,9 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 				for y := 0; y < wanted_height; y++ {
 					for x := 0; x < wanted_width; x++ {
 						r, g, b, _ := resized.At(x, y).RGBA()
-						ff[(y*wanted_width+x)*3+0] = float32(float64(int(r)-qp.ZeroPoint) * qp.Scale)
-						ff[(y*wanted_width+x)*3+1] = float32(float64(int(g)-qp.ZeroPoint) * qp.Scale)
-						ff[(y*wanted_width+x)*3+2] = float32(float64(int(b)-qp.ZeroPoint) * qp.Scale)
-						//ff[(y*wanted_width+x)*3+0] = float32(b)
-						//ff[(y*wanted_width+x)*3+1] = float32(g)
-						//ff[(y*wanted_width+x)*3+2] = float32(r)
+						ff[(y*wanted_width+x)*3+0] = (float32(r>>8) - 127.5) / 127.5
+						ff[(y*wanted_width+x)*3+1] = (float32(g>>8) - 127.5) / 127.5
+						ff[(y*wanted_width+x)*3+2] = (float32(b>>8) - 127.5) / 127.5
 					}
 				}
 				copy(input.Float32s(), ff)
@@ -407,9 +404,9 @@ func detect(wg *sync.WaitGroup, resultChan chan<- result, frameChan <-chan image
 				for y := 0; y < wanted_height; y++ {
 					for x := 0; x < wanted_width; x++ {
 						r, g, b, _ := resized.At(x, y).RGBA()
-						bb[(y*wanted_width+x)*3+0] = byte(float64(int(b)-qp.ZeroPoint) * qp.Scale)
-						bb[(y*wanted_width+x)*3+1] = byte(float64(int(g)-qp.ZeroPoint) * qp.Scale)
-						bb[(y*wanted_width+x)*3+2] = byte(float64(int(r)-qp.ZeroPoint) * qp.Scale)
+						bb[(y*wanted_width+x)*3+0] = byte(r >> 8)
+						bb[(y*wanted_width+x)*3+1] = byte(g >> 8)
+						bb[(y*wanted_width+x)*3+2] = byte(b >> 8)
 					}
 				}
 				copy(input.UInt8s(), bb)

@@ -23,6 +23,9 @@ var (
 	video     = flag.String("camera", "0", "video capture source (device number or video file)")
 	imagePath = flag.String("image", "", "path to image file; when set, writes output.png instead of using the camera")
 	modelPath = flag.String("model", "face_detection_front.tflite", "path to model file")
+	threshold = flag.Float64("threshold", 0.75, "face score threshold")
+	minTile   = flag.Int("min-tile", 0, "smallest tile side scanned in -image mode; smaller finds smaller faces (e.g. 64 for crowd shots) at the cost of speed and false positives (0: half the image)")
+	limit     = flag.Int("limit", 1000, "maximum number of faces")
 )
 
 type ssdResult struct {
@@ -118,7 +121,10 @@ func max(a, b float32) float32 {
 	return b
 }
 
-func calcIntersectionOverUnion(f1, f2 face) float32 {
+// calcOverlap returns the intersection over union of the two boxes, and the
+// intersection over the smaller box, which catches cross-scale partial
+// detections (an eye or a mouth found inside an already detected face).
+func calcOverlap(f1, f2 face) (float32, float32) {
 	xmin1 := min(f1.x1, f1.x2)
 	ymin1 := min(f1.y1, f1.y2)
 	xmax1 := max(f1.x1, f1.x2)
@@ -131,7 +137,7 @@ func calcIntersectionOverUnion(f1, f2 face) float32 {
 	area1 := (ymax1 - ymin1) * (xmax1 - xmin1)
 	area2 := (ymax2 - ymin2) * (xmax2 - xmin2)
 	if area1 <= 0 || area2 <= 0 {
-		return 0.0
+		return 0.0, 0.0
 	}
 
 	ixmin := max(xmin1, xmin2)
@@ -141,7 +147,7 @@ func calcIntersectionOverUnion(f1, f2 face) float32 {
 
 	iarea := max(iymax-iymin, 0.0) * max(ixmax-ixmin, 0.0)
 
-	return iarea / (area1 + area2 - iarea)
+	return iarea / (area1 + area2 - iarea), iarea / min(area1, area2)
 }
 
 func omitFaces(faces []face) []face {
@@ -154,8 +160,8 @@ func omitFaces(faces []face) []face {
 	for _, f1 := range faces {
 		ignore := false
 		for _, f2 := range result {
-			iou := calcIntersectionOverUnion(f1, f2)
-			if iou >= 0.3 {
+			iou, iom := calcOverlap(f1, f2)
+			if iou >= 0.3 || iom >= 0.6 {
 				ignore = true
 				break
 			}
@@ -163,7 +169,7 @@ func omitFaces(faces []face) []face {
 
 		if !ignore {
 			result = append(result, f1)
-			if len(result) >= 20 {
+			if len(result) >= *limit {
 				break
 			}
 		}
@@ -201,7 +207,7 @@ func decodeFaces(loc, score []float32, vanchors []point, wanted_width, wanted_he
 	for i := range vanchors {
 		s := 1.0 / (1.0 + math.Exp(float64(-score[i])))
 
-		if s < 0.75 {
+		if s < *threshold {
 			continue
 		}
 		p := loc[i*16 : i*16+4]
@@ -240,20 +246,7 @@ func drawFaces(mat *gocv.Mat, faces []face) {
 	}
 }
 
-// tileRects returns the whole frame plus square tiles with 50% overlap.
-// BlazeFace works on a small input and only finds faces that fill a good
-// part of it, so scanning tiles lets the example pick up faces that are
-// small relative to a large photo.
-func tileRects(width, height int) []image.Rectangle {
-	rects := []image.Rectangle{image.Rect(0, 0, width, height)}
-	side := width
-	if height < side {
-		side = height
-	}
-	side /= 2
-	if side < 128 {
-		return rects
-	}
+func appendGrid(rects []image.Rectangle, width, height, side int) []image.Rectangle {
 	step := side / 2
 	for y := 0; ; y += step {
 		if y+side > height {
@@ -264,13 +257,34 @@ func tileRects(width, height int) []image.Rectangle {
 				x = width - side
 			}
 			rects = append(rects, image.Rect(x, y, x+side, y+side))
-			if x == width-side {
+			if x >= width-side {
 				break
 			}
 		}
-		if y == height-side {
+		if y >= height-side {
 			break
 		}
+	}
+	return rects
+}
+
+// tileRects returns the whole frame plus a pyramid of square tiles with 50%
+// overlap, halving the tile side per level down to the model input size.
+// BlazeFace works on a small input and only finds faces that fill a good
+// part of it, so tiny faces in a large photo are only detected once a tile
+// around them is small enough.
+func tileRects(width, height, minSide int) []image.Rectangle {
+	rects := []image.Rectangle{image.Rect(0, 0, width, height)}
+	side := width
+	if height < side {
+		side = height
+	}
+	for side > minSide {
+		side /= 2
+		if side < minSide {
+			side = minSide
+		}
+		rects = appendGrid(rects, width, height, side)
 	}
 	return rects
 }
@@ -288,8 +302,20 @@ func runImage(interpreter *tflite.Interpreter, image_path string) {
 	vanchors := buildAnchors(wanted_width, wanted_height)
 
 	size := frame.Size()
+	minSide := *minTile
+	if minSide <= 0 {
+		// One level of half-size tiles by default: scanning further down
+		// finds smaller faces but makes the front-camera model produce
+		// false positives on face-like texture.
+		minSide = size[0]
+		if size[1] < minSide {
+			minSide = size[1]
+		}
+		minSide /= 2
+	}
+
 	var faces []face
-	for _, rect := range tileRects(size[1], size[0]) {
+	for _, rect := range tileRects(size[1], size[0], minSide) {
 		region := frame.Region(rect)
 		fillInput(input, region, wanted_width, wanted_height)
 		region.Close()

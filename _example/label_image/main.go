@@ -125,19 +125,18 @@ func main() {
 
 	output := interpreter.GetOutputTensor(0)
 	output_size := output.Dim(output.NumDims() - 1)
-	b := make([]byte, output_size)
 	type result struct {
 		score float64
 		index int
 	}
-	status = output.CopyToBuffer(&b[0])
-	if status != tflite.OK {
-		log.Println("output failed")
-		return
-	}
 	results := []result{}
 	for i := 0; i < output_size; i++ {
-		score := float64(b[i]) / 255.0
+		var score float64
+		if output.Type() == tflite.UInt8 {
+			score = float64(output.UInt8s()[i]) / 255.0
+		} else {
+			score = float64(output.Float32s()[i])
+		}
 		if score < 0.2 {
 			continue
 		}

@@ -134,8 +134,8 @@ func main() {
 		output_size := output.Dim(output.NumDims() - 1)
 		b := output.Float32s()
 		for i := 0; i < output_size; i++ {
-			score := float64(b[i]) * 255.0 / 100.0
-			if score < 0.01 {
+			score := float64(b[i])
+			if score < 0.2 {
 				continue
 			}
 			results = append(results, result{score: score, index: i})
@@ -149,7 +149,7 @@ func main() {
 			return
 		}
 		for i := 0; i < output_size; i++ {
-			score := float64(b[i])
+			score := float64(b[i]) / 255.0
 			if score < 0.2 {
 				continue
 			}

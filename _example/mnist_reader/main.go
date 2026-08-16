@@ -7,6 +7,7 @@ import (
 	_ "image/png"
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/mattn/go-tflite"
 	"github.com/nfnt/resize"
@@ -45,6 +46,10 @@ func main() {
 	input := interpreter.GetInputTensor(0)
 	output := interpreter.GetOutputTensor(0)
 
+	// The interpreter and its tensors are shared state; concurrent handlers
+	// must not interleave their use.
+	var mu sync.Mutex
+
 	http.HandleFunc("/picture", func(w http.ResponseWriter, r *http.Request) {
 		dataURL, err := dataurl.Decode(r.Body)
 		defer r.Body.Close()
@@ -66,6 +71,8 @@ func main() {
 			return
 		}
 		resized := resize.Resize(28, 28, img, resize.NearestNeighbor)
+		mu.Lock()
+		defer mu.Unlock()
 		in := input.Float32s()
 		for y := 0; y < 28; y++ {
 			for x := 0; x < 28; x++ {

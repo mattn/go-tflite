@@ -27,12 +27,14 @@ var (
 	labelPath = flag.String("label", "coco_labels.txt", "path to label file")
 )
 
-type ssdResult struct {
+// headData holds one YOLO output head, dequantized to float32.
+type headData struct {
 	loc   []float32
 	shape []int
-	anc   int
-	cls   int
-	thr   float32
+}
+
+type ssdResult struct {
+	heads []headData
 	mat   gocv.Mat
 }
 
@@ -122,13 +124,6 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 	defer close(resultChan)
 
 	input := interpreter.GetInputTensor(0)
-	output := interpreter.GetOutputTensor(0)
-	typ := output.Type()
-	shape := output.Shape()
-	anc := 1
-	if len(shape) == 5 {
-		anc = shape[3]
-	}
 
 	qp := input.QuantizationParams()
 	log.Printf("width: %v, height: %v, type: %v, scale: %v, zeropoint: %v", wanted_width, wanted_height, input.Type(), qp.Scale, qp.ZeroPoint)
@@ -171,40 +166,36 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 			return
 		}
 
-		var loc []float32
-		switch typ {
-		case tflite.UInt8:
-			f := output.UInt8s()
-			loc = make([]float32, len(f), len(f))
-			for i, v := range f {
-				loc[i] = float32(v) / 255
+		var heads []headData
+		for t := 0; t < interpreter.GetOutputTensorCount(); t++ {
+			output := interpreter.GetOutputTensor(t)
+			if output.NumDims() < 4 {
+				continue
 			}
-			resultChan <- &ssdResult{
-				loc:   loc,
-				thr:   0.8,
-				anc:   anc,
-				cls:   10,
-				shape: shape,
-				mat:   frame,
+			var loc []float32
+			switch output.Type() {
+			case tflite.UInt8:
+				oqp := output.QuantizationParams()
+				scale := oqp.Scale
+				if scale == 0 {
+					scale = 1
+				}
+				f := output.UInt8s()
+				loc = make([]float32, len(f))
+				for i, v := range f {
+					loc[i] = float32(scale * float64(int(v)-oqp.ZeroPoint))
+				}
+			case tflite.Float32:
+				loc = make([]float32, len(output.Float32s()))
+				copy(loc, output.Float32s())
 			}
-		case tflite.Float32:
-			f := output.Float32s()
-			loc = make([]float32, len(f), len(f))
-			for i, v := range f {
-				loc[i] = v
+			if loc != nil {
+				heads = append(heads, headData{loc: loc, shape: output.Shape()})
 			}
-			resultChan <- &ssdResult{
-				loc:   loc,
-				thr:   0.3,
-				anc:   anc,
-				cls:   80,
-				shape: shape,
-				mat:   frame,
-			}
-		default:
-			resultChan <- &ssdResult{
-				mat: frame,
-			}
+		}
+		resultChan <- &ssdResult{
+			heads: heads,
+			mat:   frame,
 		}
 	}
 }
@@ -215,6 +206,8 @@ type item struct {
 	class          int
 }
 
+// Anchor sizes in model input pixels: 9 for full YOLOv3 (3 heads), 6 for
+// YOLOv3-tiny (2 heads). Each head uses a group of 3, coarse heads first.
 var anchors = []float32{
 	10, 13,
 	16, 30,
@@ -225,6 +218,19 @@ var anchors = []float32{
 	116, 90,
 	156, 198,
 	373, 326,
+}
+
+var anchorsTiny = []float32{
+	10, 14,
+	23, 27,
+	37, 58,
+	81, 82,
+	135, 169,
+	344, 319,
+}
+
+func sigmoid(v float32) float32 {
+	return float32(1 / (1 + math.Exp(float64(-v))))
 }
 
 func argmax(f []float32) int {
@@ -327,33 +333,66 @@ func main() {
 			break
 		}
 
+		const scoreThreshold = 0.3
+
 		var items []item
-		loc := result.loc
 		size := result.mat.Size()
-		if len(loc) != 0 {
-			shape := result.shape
-			sx := float32(size[1]) / float32(shape[1])
-			sy := float32(size[0]) / float32(shape[2])
-			for i := 0; i < shape[1]; i++ {
-				for j := 0; j < shape[2]; j++ {
-					for k := 0; k < result.anc; k++ {
-						idx := ((i*shape[2]+j)*result.anc + k) * shape[len(shape)-1]
-						if loc[idx+4] < result.thr {
+		anchorList := anchors
+		if len(result.heads) == 2 {
+			anchorList = anchorsTiny
+		}
+		for hi, head := range result.heads {
+			shape := head.shape
+			loc := head.loc
+
+			// Heads come as either [1,h,w,anchors,5+classes] or with the
+			// anchors folded into the channel dimension.
+			var anc, per int
+			if len(shape) == 5 {
+				anc, per = shape[3], shape[4]
+			} else if shape[3]%3 == 0 {
+				anc, per = 3, shape[3]/3
+			} else {
+				anc, per = 1, shape[3]
+			}
+
+			// Coarse heads use the large anchors at the end of the list.
+			maskStart := (len(result.heads) - 1 - hi) * 3
+			if (maskStart+anc)*2 > len(anchorList) {
+				maskStart = 0
+			}
+
+			gridH, gridW := shape[1], shape[2]
+			strideX := float32(size[1]) / float32(gridW)
+			strideY := float32(size[0]) / float32(gridH)
+			scaleX := float32(size[1]) / float32(wanted_width)
+			scaleY := float32(size[0]) / float32(wanted_height)
+			for i := 0; i < gridH; i++ {
+				for j := 0; j < gridW; j++ {
+					for k := 0; k < anc; k++ {
+						idx := ((i*gridW+j)*anc + k) * per
+						objectness := sigmoid(loc[idx+4])
+						if objectness < scoreThreshold {
 							continue
 						}
-						dx := anchors[k*2+0]
-						dy := anchors[k*2+1]
-						x1 := sx*float32(j) + sx*loc[idx+0]
-						y1 := sy*float32(i) + sy*loc[idx+1]
-						w := sx * float32(math.Log(float64(dx*float32(math.Exp(float64(loc[idx+2]))))))
-						h := sy * float32(math.Log(float64(dy*float32(math.Exp(float64(loc[idx+3]))))))
+						class := argmax(loc[idx+5 : idx+per])
+						score := objectness * sigmoid(loc[idx+5+class])
+						if score < scoreThreshold {
+							continue
+						}
+						// bx = (sigmoid(tx)+cell)*stride, w = anchor*exp(tw),
+						// with anchors given in model input pixels.
+						cx := (float32(j) + sigmoid(loc[idx+0])) * strideX
+						cy := (float32(i) + sigmoid(loc[idx+1])) * strideY
+						w := anchorList[(maskStart+k)*2+0] * float32(math.Exp(float64(loc[idx+2]))) * scaleX
+						h := anchorList[(maskStart+k)*2+1] * float32(math.Exp(float64(loc[idx+3]))) * scaleY
 						items = append(items, item{
-							x1:    x1 - w/2,
-							y1:    y1 - h/2,
-							x2:    x1 + w/2,
-							y2:    y1 + h/2,
-							score: loc[idx+4],
-							class: argmax(loc[idx+5 : idx+5+result.cls]),
+							x1:    cx - w/2,
+							y1:    cy - h/2,
+							x2:    cx + w/2,
+							y2:    cy + h/2,
+							score: score,
+							class: class,
 						})
 					}
 				}

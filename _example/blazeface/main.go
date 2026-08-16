@@ -226,7 +226,7 @@ func decodeFaces(loc, score []float32, vanchors []point, wanted_width, wanted_he
 			score: float32(s),
 		})
 	}
-	return omitFaces(faces)
+	return faces
 }
 
 func drawFaces(mat *gocv.Mat, faces []face) {
@@ -240,6 +240,41 @@ func drawFaces(mat *gocv.Mat, faces []face) {
 	}
 }
 
+// tileRects returns the whole frame plus square tiles with 50% overlap.
+// BlazeFace works on a small input and only finds faces that fill a good
+// part of it, so scanning tiles lets the example pick up faces that are
+// small relative to a large photo.
+func tileRects(width, height int) []image.Rectangle {
+	rects := []image.Rectangle{image.Rect(0, 0, width, height)}
+	side := width
+	if height < side {
+		side = height
+	}
+	side /= 2
+	if side < 128 {
+		return rects
+	}
+	step := side / 2
+	for y := 0; ; y += step {
+		if y+side > height {
+			y = height - side
+		}
+		for x := 0; ; x += step {
+			if x+side > width {
+				x = width - side
+			}
+			rects = append(rects, image.Rect(x, y, x+side, y+side))
+			if x == width-side {
+				break
+			}
+		}
+		if y == height-side {
+			break
+		}
+	}
+	return rects
+}
+
 func runImage(interpreter *tflite.Interpreter, image_path string) {
 	frame := gocv.IMRead(image_path, gocv.IMReadColor)
 	if frame.Empty() {
@@ -250,18 +285,31 @@ func runImage(interpreter *tflite.Interpreter, image_path string) {
 	input := interpreter.GetInputTensor(0)
 	wanted_height := input.Dim(1)
 	wanted_width := input.Dim(2)
-
-	fillInput(input, frame, wanted_width, wanted_height)
-	if interpreter.Invoke() != tflite.OK {
-		log.Fatal("invoke failed")
-	}
+	vanchors := buildAnchors(wanted_width, wanted_height)
 
 	size := frame.Size()
-	faces := decodeFaces(
-		interpreter.GetOutputTensor(0).Float32s(),
-		interpreter.GetOutputTensor(1).Float32s(),
-		buildAnchors(wanted_width, wanted_height),
-		wanted_width, wanted_height, size[1], size[0])
+	var faces []face
+	for _, rect := range tileRects(size[1], size[0]) {
+		region := frame.Region(rect)
+		fillInput(input, region, wanted_width, wanted_height)
+		region.Close()
+		if interpreter.Invoke() != tflite.OK {
+			log.Fatal("invoke failed")
+		}
+
+		for _, f := range decodeFaces(
+			interpreter.GetOutputTensor(0).Float32s(),
+			interpreter.GetOutputTensor(1).Float32s(),
+			vanchors,
+			wanted_width, wanted_height, rect.Dx(), rect.Dy()) {
+			f.x1 += float32(rect.Min.X)
+			f.y1 += float32(rect.Min.Y)
+			f.x2 += float32(rect.Min.X)
+			f.y2 += float32(rect.Min.Y)
+			faces = append(faces, f)
+		}
+	}
+	faces = omitFaces(faces)
 
 	for _, face := range faces {
 		fmt.Printf("face score=%f x1=%.1f y1=%.1f x2=%.1f y2=%.1f\n",
@@ -325,7 +373,7 @@ func runVideo(interpreter *tflite.Interpreter, video string) {
 		}
 
 		size := result.mat.Size()
-		faces := decodeFaces(result.loc, result.score, vanchors, wanted_width, wanted_height, size[1], size[0])
+		faces := omitFaces(decodeFaces(result.loc, result.score, vanchors, wanted_width, wanted_height, size[1], size[0]))
 		drawFaces(&result.mat, faces)
 
 		window.IMShow(result.mat)

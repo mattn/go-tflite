@@ -50,10 +50,7 @@ func predict(img image.Image, mpredict string) ([]float32, error) {
 
 	interpreter.Invoke()
 
-	dx = output.Dim(1)
-	dx = output.Dim(2)
-	wanted_channel = output.Dim(3)
-	ff := make([]float32, dx*dy*wanted_channel)
+	ff := make([]float32, len(output.Float32s()))
 	copy(ff, output.Float32s())
 	return ff, nil
 }

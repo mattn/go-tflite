@@ -171,10 +171,7 @@ func main() {
 	sort.Slice(results, func(i, j int) bool {
 		return results[i].score > results[j].score
 	})
-	for i := 0; i < len(results); i++ {
+	for i := 0; i < len(results) && i < 5; i++ {
 		fmt.Printf("%02d: %s: %f\n", results[i].index, labels[results[i].index], results[i].score)
-		if i > 5 {
-			break
-		}
 	}
 }

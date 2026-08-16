@@ -66,11 +66,6 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 		qp.Scale = 1
 	}
 
-	var loc [1][20][4]float32
-	var clazz [1][20]float32
-	var score [1][20]float32
-	var nums [1]float32
-
 	output1 := interpreter.GetOutputTensor(0)
 	output2 := interpreter.GetOutputTensor(1)
 	output3 := interpreter.GetOutputTensor(2)
@@ -93,9 +88,17 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 		}
 
 		resized := gocv.NewMat()
-		gocv.Resize(frame, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
-		if v, err := resized.DataPtrUint8(); err == nil {
-			copy(input.UInt8s(), v)
+		gocv.CvtColor(frame, &resized, gocv.ColorBGRToRGB)
+		gocv.Resize(resized, &resized, image.Pt(wanted_width, wanted_height), 0, 0, gocv.InterpolationDefault)
+		if input.Type() == tflite.Float32 {
+			resized.ConvertToWithParams(&resized, gocv.MatTypeCV32F, 1/127.5, -1)
+			if ff, err := resized.DataPtrFloat32(); err == nil {
+				copy(input.Float32s(), ff)
+			}
+		} else {
+			if v, err := resized.DataPtrUint8(); err == nil {
+				copy(input.UInt8s(), v)
+			}
 		}
 		resized.Close()
 		status := interpreter.Invoke()
@@ -104,6 +107,12 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 			return
 		}
 
+		// Fresh buffers every frame: the slices sent over resultChan must not
+		// be overwritten while the display loop is still reading them.
+		var loc [1][20][4]float32
+		var clazz [1][20]float32
+		var score [1][20]float32
+		var nums [1]float32
 		output1.CopyToBuffer(&loc[0])
 		output2.CopyToBuffer(&clazz[0])
 		output3.CopyToBuffer(&score[0])
@@ -217,7 +226,7 @@ func main() {
 			if score < 0.6 {
 				continue
 			}
-			classes = append(classes, ssdClass{loc: result.loc[i], score: score, index: int(result.clazz[i])})
+			classes = append(classes, ssdClass{loc: result.loc[i], score: score, index: int(result.clazz[i]) + 1})
 		}
 		sort.Slice(classes, func(i, j int) bool {
 			return classes[i].score > classes[j].score

@@ -17,7 +17,7 @@ import (
 
 func loadLabels(filename string) ([]string, error) {
 	labels := []string{}
-	f, err := os.Open("labels.txt")
+	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}

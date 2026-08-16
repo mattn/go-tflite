@@ -270,7 +270,7 @@ func run() {
 				if class.index < len(labels) {
 					label = labels[class.index]
 				}
-				imd.Color = colornames.Map[colornames.Names[class.index]]
+				imd.Color = colornames.Map[colornames.Names[class.index%len(colornames.Names)]]
 				pos := pixel.V(float64(size.Dx())*float64(class.loc[1]), float64(size.Dy())*float64(1-class.loc[0]))
 				imd.Push(pos)
 				imd.Push(pixel.V(float64(size.Dx())*float64(class.loc[3]), float64(size.Dy())*float64(1-class.loc[0])))

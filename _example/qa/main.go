@@ -323,12 +323,15 @@ func printResults(feature *Feature, startLogits, endLogits []float32) {
 		return origResults[i].logi > origResults[j].logi
 	})
 	for _, result := range origResults {
+		// Skip candidates anchored at the [CLS] position, which the model
+		// uses to signal "no answer".
+		if result.start <= 0 {
+			continue
+		}
 		startIndex := feature.tokenToOrigMap[result.start+1]
 		endIndex := feature.tokenToOrigMap[result.end+1]
-		if startIndex > 0 {
-			fmt.Println(strings.Join(feature.origTokens[startIndex:endIndex+1], " "))
-			break
-		}
+		fmt.Println(strings.Join(feature.origTokens[startIndex:endIndex+1], " "))
+		break
 	}
 }
 

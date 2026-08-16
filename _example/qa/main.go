@@ -275,7 +275,7 @@ func loadDictionaryFile(filename string) map[string]int32 {
 
 func getBestIndex(logits []float32) []int {
 	tmpList := []Pos{}
-	for i := 0; i < MAX_SEQ_LEN; i++ {
+	for i := 0; i < len(logits); i++ {
 		tmpList = append(tmpList, Pos{
 			start: i,
 			end:   i,
@@ -309,7 +309,7 @@ func printResults(feature *Feature, startLogits, endLogits []float32) {
 			if end < start {
 				continue
 			}
-			if end-start > MAX_ANS_LEN {
+			if end-start+1 > MAX_ANS_LEN {
 				continue
 			}
 			origResults = append(origResults, Pos{

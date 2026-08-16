@@ -8,7 +8,7 @@ require (
 	github.com/faiface/pixel v0.10.0
 	github.com/mattn/go-tflite v1.0.5
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
-	gocv.io/x/gocv v0.43.0
+	gocv.io/x/gocv v0.29.0
 	golang.org/x/image v0.43.0
 )
 

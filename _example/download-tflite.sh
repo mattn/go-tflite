@@ -69,3 +69,30 @@ fetch text_classification/text_classification.tflite "https://storage.googleapis
 # yolo (yolov3-tiny and yolov4-tiny)
 fetch yolo/yolov3-tiny.tflite "https://github.com/wics1224/yolov3-android-tflite/raw/master/app/src/main/assets/yolov3_tiny_pb.tflite"
 fetch yolo/yolov4-416-fp32.tflite "https://github.com/hunglc007/tensorflow-yolov4-tflite/raw/master/android/app/src/main/assets/yolov4-416-fp32.tflite"
+
+# audio_classification
+fetch audio_classification/yamnet.tflite "https://tfhub.dev/google/lite-model/yamnet/classification/tflite/1?lite-format=tflite"
+
+# speech_commands
+fetch_zip speech_commands conv_actions_frozen.tflite "https://storage.googleapis.com/download.tensorflow.org/models/tflite/conv_actions_tflite.zip"
+
+# gesture_classification
+fetch gesture_classification/model.tflite "https://storage.googleapis.com/download.tensorflow.org/models/tflite/task_library/gesture_classification/android/model_metadata.tflite"
+
+# recommendation
+fetch recommendation/recommendation.tflite "https://storage.googleapis.com/download.tensorflow.org/models/tflite/recommendation/20200823/recommendation_rnn_i10o100.tflite"
+fetch recommendation/sorted_movie_vocab.json "https://storage.googleapis.com/download.tensorflow.org/models/tflite/recommendation/20200823/sorted_movie_vocab.json"
+
+# reinforcement_learning
+fetch reinforcement_learning/planestrike.tflite "https://raw.githubusercontent.com/tensorflow/examples/master/lite/examples/reinforcement_learning/android/app/src/main/assets/planestrike_tf.tflite"
+
+# video_classification
+fetch video_classification/movinet_a0_stream.tflite "https://tfhub.dev/tensorflow/lite-model/movinet/a0/stream/kinetics-600/classification/tflite/int8/1?lite-format=tflite"
+
+# ocr
+fetch ocr/east_text_detector.tflite "https://tfhub.dev/sayakpaul/lite-model/east-text-detector/dr/1?lite-format=tflite"
+fetch ocr/text_recognition.tflite "https://raw.githubusercontent.com/tulasiram58827/ocr_tflite/main/models/keras_ocr_dr.tflite"
+
+# pose (MoveNet models, used with -model)
+fetch pose/movenet_lightning.tflite "https://tfhub.dev/google/lite-model/movenet/singlepose/lightning/tflite/float16/4?lite-format=tflite"
+fetch pose/movenet_multipose.tflite "https://tfhub.dev/google/lite-model/movenet/multipose/lightning/tflite/float16/1?lite-format=tflite"

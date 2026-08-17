@@ -228,6 +228,12 @@ func main() {
 	}
 	defer interpreter.Delete()
 
+	// MoveNet multipose has a dynamic [1,1,1,3] input; give it a fixed size
+	// (multiples of 32, per the model card) before allocating.
+	if input := interpreter.GetInputTensor(0); input.Type() == tflite.UInt8 && input.Dim(1) <= 1 {
+		interpreter.ResizeInputTensor(0, []int32{1, 256, 256, 3})
+	}
+
 	status := interpreter.AllocateTensors()
 	if status != tflite.OK {
 		log.Println("allocate failed")
@@ -834,12 +840,96 @@ func findOutputTensors(interpreter *tflite.Interpreter) (scores, offsets, displa
 	return scores, offsets, displacementsFwd, displacementsBwd, nil
 }
 
+// movenetKeypoints converts one MoveNet instance (triples of normalized
+// y, x, score in COCO-17 part order) to keypoints in model input pixels.
+func movenetKeypoints(v []float32, width, height int) []*keypoint {
+	keypoints := make([]*keypoint, len(partNames))
+	for i := range keypoints {
+		keypoints[i] = &keypoint{
+			part:  partNames[i],
+			score: float64(v[i*3+2]),
+			position: vector2d{
+				x: float64(v[i*3+1]) * float64(width),
+				y: float64(v[i*3+0]) * float64(height),
+			},
+		}
+	}
+	return keypoints
+}
+
+// estimateMovenetPoses handles MoveNet models, which take a uint8 RGB image
+// and return decoded keypoints: [1,1,17,3] for singlepose models and [1,6,56]
+// (17 keypoints + bbox + score per instance) for multipose models.
+func estimateMovenetPoses(interpreter *tflite.Interpreter, img image.Image) ([]pose, error) {
+	input := interpreter.GetInputTensor(0)
+	wanted_height := input.Dim(1)
+	wanted_width := input.Dim(2)
+
+	scale := float64(wanted_width) / float64(img.Bounds().Dx())
+	if s := float64(wanted_height) / float64(img.Bounds().Dy()); s < scale {
+		scale = s
+	}
+	scaledWidth := int(float64(img.Bounds().Dx()) * scale)
+	scaledHeight := int(float64(img.Bounds().Dy()) * scale)
+
+	resized := resize.Resize(uint(scaledWidth), uint(scaledHeight), img, resize.Bilinear)
+	buf := input.UInt8s()
+	for y := 0; y < wanted_height; y++ {
+		for x := 0; x < wanted_width; x++ {
+			var fr, fg, fb uint8
+			if x < scaledWidth && y < scaledHeight {
+				r, g, b, _ := resized.At(x, y).RGBA()
+				fr, fg, fb = uint8(r>>8), uint8(g>>8), uint8(b>>8)
+			}
+			buf[(y*wanted_width+x)*3+0] = fr
+			buf[(y*wanted_width+x)*3+1] = fg
+			buf[(y*wanted_width+x)*3+2] = fb
+		}
+	}
+
+	if interpreter.Invoke() != tflite.OK {
+		return nil, errors.New("invoke failed")
+	}
+
+	output := interpreter.GetOutputTensor(0)
+	v := output.Float32s()
+	var poses []pose
+	switch {
+	case output.NumDims() == 4 && output.Dim(2) == len(partNames): // singlepose
+		keypoints := movenetKeypoints(v, wanted_width, wanted_height)
+		score := float64(0)
+		for _, k := range keypoints {
+			score += k.score
+		}
+		poses = append(poses, pose{keypoints: keypoints, score: score / float64(len(keypoints))})
+	case output.NumDims() == 3 && output.Dim(2) == len(partNames)*3+5: // multipose
+		per := output.Dim(2)
+		for i := 0; i < output.Dim(1); i++ {
+			inst := v[i*per : (i+1)*per]
+			poses = append(poses, pose{
+				keypoints: movenetKeypoints(inst, wanted_width, wanted_height),
+				score:     float64(inst[per-1]),
+			})
+		}
+	default:
+		return nil, errors.New("unexpected model outputs: not a MoveNet model?")
+	}
+
+	for i := 0; i < len(poses); i++ {
+		poses[i].scale(1/scale, 1/scale)
+	}
+	return poses, nil
+}
+
 func estimateMultiplePoses(
 	interpreter *tflite.Interpreter,
 	img image.Image, maxDetections int, scoreThreshold float64,
 	nmsRadius int) ([]pose, error) {
 
 	input := interpreter.GetInputTensor(0)
+	if input.Type() == tflite.UInt8 {
+		return estimateMovenetPoses(interpreter, img)
+	}
 	wanted_height := input.Dim(1)
 	wanted_width := input.Dim(2)
 

@@ -387,9 +387,11 @@ func runVideo(interpreter *tflite.Interpreter, video_path, out_path string) {
 	if outFPS <= 0 {
 		outFPS = 30
 	}
-	fourcc := "mp4v"
+	// Prefer H.264 for .mp4 — services like X reject MPEG-4 Part 2 — and
+	// fall back to mp4v on OpenCV builds without an H.264 encoder.
+	fourccs := []string{"avc1", "mp4v"}
 	if strings.HasSuffix(strings.ToLower(out_path), ".avi") {
-		fourcc = "MJPG"
+		fourccs = []string{"MJPG"}
 	}
 	defer func() {
 		if writer != nil {
@@ -432,9 +434,18 @@ func runVideo(interpreter *tflite.Interpreter, video_path, out_path string) {
 
 		if out_path != "" {
 			if writer == nil {
-				writer, err = gocv.VideoWriterFile(out_path, fourcc, outFPS,
-					result.mat.Cols(), result.mat.Rows(), true)
-				if err != nil {
+				for _, fourcc := range fourccs {
+					writer, err = gocv.VideoWriterFile(out_path, fourcc, outFPS,
+						result.mat.Cols(), result.mat.Rows(), true)
+					if err == nil && writer.IsOpened() {
+						break
+					}
+					if writer != nil {
+						writer.Close()
+					}
+					writer = nil
+				}
+				if writer == nil {
 					log.Printf("cannot open video writer: %v", err)
 					out_path = ""
 				}

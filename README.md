@@ -36,17 +36,12 @@ See `_example` for more examples
 
 ## Tensorflow Installation
 
-You must install Tensorflow Lite C API. Assuming the source is under /source/directory/tensorflow
+You must install Tensorflow Lite C API. go-tflite links against
+`libtensorflowlite_c.so` only, so there is no need to build the full
+TensorFlow library. Assuming the source is under /source/directory/tensorflow
 
 ```
 $ cd /source/directory/tensorflow
-$ bazel build --config opt --config monolithic tensorflow:libtensorflow_c.so
-```
-
-Or to just compile the tensorflow lite libraries:
-```
-$ cd /some/path/tensorflow
-$ bazel build --config opt --config monolithic //tensorflow/lite:libtensorflowlite.so
 $ bazel build --config opt --config monolithic //tensorflow/lite/c:libtensorflowlite_c.so
 ```
 

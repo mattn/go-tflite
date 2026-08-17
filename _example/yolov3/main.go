@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-tflite"
-	"github.com/mattn/go-tflite/delegates/edgetpu"
+	//"github.com/mattn/go-tflite/delegates/edgetpu"
 	"golang.org/x/image/colornames"
 
 	"gocv.io/x/gocv"
@@ -169,7 +169,7 @@ func detect(ctx context.Context, wg *sync.WaitGroup, resultChan chan<- *ssdResul
 		var heads []headData
 		for t := 0; t < interpreter.GetOutputTensorCount(); t++ {
 			output := interpreter.GetOutputTensor(t)
-			if output.NumDims() < 4 {
+			if output.NumDims() < 3 {
 				continue
 			}
 			var loc []float32
@@ -233,6 +233,27 @@ func sigmoid(v float32) float32 {
 	return float32(1 / (1 + math.Exp(float64(-v))))
 }
 
+// decodedHeads reports whether the model outputs already-decoded boxes, as
+// YOLOv4 models converted with hunglc007/tensorflow-yolov4-tflite do: one
+// [1,N,4] tensor of (cx,cy,w,h) in model input pixels and one [1,N,classes]
+// tensor of per-class scores.
+func decodedHeads(heads []headData) (*headData, *headData, bool) {
+	if len(heads) != 2 {
+		return nil, nil, false
+	}
+	b, s := &heads[0], &heads[1]
+	if len(b.shape) != 3 || len(s.shape) != 3 {
+		return nil, nil, false
+	}
+	if b.shape[2] != 4 {
+		b, s = s, b
+	}
+	if b.shape[2] != 4 || s.shape[2] <= 4 || b.shape[1] != s.shape[1] {
+		return nil, nil, false
+	}
+	return b, s, true
+}
+
 func argmax(f []float32) int {
 	r, m := 0, f[0]
 	for i, v := range f {
@@ -280,10 +301,12 @@ func main() {
 
 	options := tflite.NewInterpreterOptions()
 
-	devices, err := edgetpu.DeviceList()
-	if err == nil && len(devices) > 0 {
-		options.AddDelegate(edgetpu.New(devices[0]))
-	}
+	/*
+		devices, err := edgetpu.DeviceList()
+		if err == nil && len(devices) > 0 {
+			options.AddDelegate(edgetpu.New(devices[0]))
+		}
+	*/
 	options.SetNumThread(4)
 	defer options.Delete()
 
@@ -337,6 +360,31 @@ func main() {
 
 		var items []item
 		size := result.mat.Size()
+		if b, s, ok := decodedHeads(result.heads); ok {
+			classes := s.shape[2]
+			scaleX := float32(size[1]) / float32(wanted_width)
+			scaleY := float32(size[0]) / float32(wanted_height)
+			for i := 0; i < b.shape[1]; i++ {
+				sc := s.loc[i*classes : (i+1)*classes]
+				class := argmax(sc)
+				score := sc[class]
+				if score < scoreThreshold {
+					continue
+				}
+				cx := b.loc[i*4+0] * scaleX
+				cy := b.loc[i*4+1] * scaleY
+				w := b.loc[i*4+2] * scaleX
+				h := b.loc[i*4+3] * scaleY
+				items = append(items, item{
+					x1:    cx - w/2,
+					y1:    cy - h/2,
+					x2:    cx + w/2,
+					y2:    cy + h/2,
+					score: score,
+					class: class,
+				})
+			}
+		}
 		anchorList := anchors
 		if len(result.heads) == 2 {
 			anchorList = anchorsTiny
@@ -344,6 +392,9 @@ func main() {
 		for hi, head := range result.heads {
 			shape := head.shape
 			loc := head.loc
+			if len(shape) < 4 {
+				continue
+			}
 
 			// Heads come as either [1,h,w,anchors,5+classes] or with the
 			// anchors folded into the channel dimension.

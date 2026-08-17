@@ -14,6 +14,8 @@
 #   TENSORFLOW_VERSION  git tag/branch of tensorflow to build (default: v2.17.1)
 #   TENSORFLOW_SRC      where to clone/find the tensorflow source
 #   OUT_DIR             where to place the resulting tarball (default: ./dist)
+#   BUILDKIT_SUFFIX     suffix of the tarball name, typically a go-tflite
+#                       release tag (default: today's date as YYYYMMDD)
 set -euo pipefail
 
 TENSORFLOW_VERSION=${TENSORFLOW_VERSION:-v2.17.1}
@@ -56,6 +58,6 @@ install -m 755 bazel-bin/tensorflow/lite/c/libtensorflowlite_c.so "$STAGE/lib/"
 rm -f "$STAGE/probe.c"
 
 mkdir -p "$OUT_DIR"
-NAME=go-tflite-buildkit-$(date +%Y%m%d).tar.gz
+NAME=go-tflite-buildkit-${BUILDKIT_SUFFIX:-$(date +%Y%m%d)}.tar.gz
 tar czf "$OUT_DIR/$NAME" -C "$STAGE" include lib
 echo "created: $OUT_DIR/$NAME"

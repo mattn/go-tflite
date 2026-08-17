@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  TENSORFLOW_VERSION: v2.17.1
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Cache bazel
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel
+          key: bazel-${{ runner.os }}-${{ env.TENSORFLOW_VERSION }}
+
+      - name: Build buildkit
+        run: ./ci/build-buildkit.sh
+        env:
+          TENSORFLOW_SRC: ${{ runner.temp }}/tensorflow_src
+          OUT_DIR: ${{ github.workspace }}/dist
+          BUILDKIT_SUFFIX: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}
+
+      - name: Install buildkit into /usr/local
+        run: |
+          sudo tar xzf dist/go-tflite-buildkit-*.tar.gz -C /usr/local
+          sudo ldconfig
+
+      - name: Build
+        run: go build .
+
+      - name: Test
+        run: go test -v .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: go-tflite-buildkit
+          path: dist/*.tar.gz
+
+      - name: Upload buildkit to release
+        if: github.event_name == 'release'
+        run: gh release upload "$GITHUB_REF_NAME" dist/*.tar.gz --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -66,6 +66,6 @@ fetch style_transform/style_transfer_quantized_dynamic.tflite "https://storage.g
 # text_classification
 fetch text_classification/text_classification.tflite "https://storage.googleapis.com/download.tensorflow.org/models/tflite/text_classification/text_classification.tflite"
 
-# yolov3 (yolov3-tiny and yolov4-tiny)
-fetch yolov3/yolov3-tiny.tflite "https://github.com/wics1224/yolov3-android-tflite/raw/master/app/src/main/assets/yolov3_tiny_pb.tflite"
-fetch yolov3/yolov4-416-fp32.tflite "https://github.com/hunglc007/tensorflow-yolov4-tflite/raw/master/android/app/src/main/assets/yolov4-416-fp32.tflite"
+# yolo (yolov3-tiny and yolov4-tiny)
+fetch yolo/yolov3-tiny.tflite "https://github.com/wics1224/yolov3-android-tflite/raw/master/app/src/main/assets/yolov3_tiny_pb.tflite"
+fetch yolo/yolov4-416-fp32.tflite "https://github.com/hunglc007/tensorflow-yolov4-tflite/raw/master/android/app/src/main/assets/yolov4-416-fp32.tflite"

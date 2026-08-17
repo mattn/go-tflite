@@ -20,5 +20,5 @@ style_transform/style_predict_quantized_256.tflite
 style_transform/style_transfer_quantized_dynamic.tflite
 text_classification/text_classification.tflite
 webcam/mobilenet_quant_v1_224.tflite
-yolov3/yolov3-tiny.tflite
-yolov3/yolov4-416-fp32.tflite
+yolo/yolov3-tiny.tflite
+yolo/yolov4-416-fp32.tflite

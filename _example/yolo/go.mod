@@ -1,4 +1,4 @@
-module github.com/mattn/go-tflite/_example/yolov3
+module github.com/mattn/go-tflite/_example/yolo
 
 go 1.25.0
 

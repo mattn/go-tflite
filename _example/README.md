@@ -26,8 +26,8 @@ The script only fetches files that are missing, so it is safe to re-run.
 | ssd_edgetpu | `mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite`, `coco_labels.txt` | [Coral canned models](https://dl.google.com/coral/canned_models/mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite) |
 | style_transform | `style_predict_quantized_256.tflite`, `style_transfer_quantized_dynamic.tflite` | [Magenta arbitrary image stylization](https://storage.googleapis.com/download.tensorflow.org/models/tflite/arbitrary_style_transfer/style_predict_quantized_256.tflite) (TensorFlow Lite style transfer example) |
 | text_classification | `text_classification.tflite` | [TensorFlow Lite text classification example](https://storage.googleapis.com/download.tensorflow.org/models/tflite/text_classification/text_classification.tflite) |
-| yolov3 | `yolov3-tiny.tflite` | [wics1224/yolov3-android-tflite](https://github.com/wics1224/yolov3-android-tflite) (`yolov3_tiny_pb.tflite`, Keras YOLOv3-tiny converted to tflite) |
-| yolov3 | `yolov4-416-fp32.tflite` | [hunglc007/tensorflow-yolov4-tflite](https://github.com/hunglc007/tensorflow-yolov4-tflite) (Android app asset; YOLOv4-tiny with decoded box outputs, run with `-model yolov4-416-fp32.tflite`) |
+| yolo | `yolov3-tiny.tflite` | [wics1224/yolov3-android-tflite](https://github.com/wics1224/yolov3-android-tflite) (`yolov3_tiny_pb.tflite`, Keras YOLOv3-tiny converted to tflite) |
+| yolo | `yolov4-416-fp32.tflite` | [hunglc007/tensorflow-yolov4-tflite](https://github.com/hunglc007/tensorflow-yolov4-tflite) (Android app asset; YOLOv4-tiny with decoded box outputs, run with `-model yolov4-416-fp32.tflite`) |
 
 ## Models generated in this repository
 

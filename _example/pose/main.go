@@ -13,6 +13,7 @@ import (
 	"math"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"time"
 
@@ -202,10 +203,11 @@ const (
 )
 
 func main() {
-	var model_path, image_path, video_path string
+	var model_path, image_path, video_path, out_path string
 	flag.StringVar(&model_path, "model", "multi_person_mobilenet_v1_075_float.tflite", "path to model file")
 	flag.StringVar(&image_path, "image", "", "path to image file; when set, writes output.png instead of using the camera")
 	flag.StringVar(&video_path, "camera", "0", "video capture source (device number or video file)")
+	flag.StringVar(&out_path, "out", "", "write the annotated video to this file (.mp4 or .avi)")
 	flag.Parse()
 
 	model := tflite.NewModelFromFile(model_path)
@@ -235,7 +237,7 @@ func main() {
 	if image_path != "" {
 		runImage(interpreter, image_path)
 	} else {
-		runVideo(interpreter, video_path)
+		runVideo(interpreter, video_path, out_path)
 	}
 }
 
@@ -370,13 +372,30 @@ func drawPoses(mat *gocv.Mat, poses []pose) {
 	}
 }
 
-func runVideo(interpreter *tflite.Interpreter, video_path string) {
+func runVideo(interpreter *tflite.Interpreter, video_path, out_path string) {
 	cam, err := gocv.OpenVideoCapture(video_path)
 	if err != nil {
 		log.Printf("cannot open camera: %v", err)
 		return
 	}
 	defer cam.Close()
+
+	// The writer is created on the first frame, when the real frame size is
+	// known; cameras often misreport it before the first read.
+	var writer *gocv.VideoWriter
+	outFPS := cam.Get(gocv.VideoCaptureFPS)
+	if outFPS <= 0 {
+		outFPS = 30
+	}
+	fourcc := "mp4v"
+	if strings.HasSuffix(strings.ToLower(out_path), ".avi") {
+		fourcc = "MJPG"
+	}
+	defer func() {
+		if writer != nil {
+			writer.Close()
+		}
+	}()
 
 	window := gocv.NewWindow("Pose")
 	defer window.Close()
@@ -410,6 +429,20 @@ func runVideo(interpreter *tflite.Interpreter, video_path string) {
 		}
 
 		drawPoses(&result.mat, result.poses)
+
+		if out_path != "" {
+			if writer == nil {
+				writer, err = gocv.VideoWriterFile(out_path, fourcc, outFPS,
+					result.mat.Cols(), result.mat.Rows(), true)
+				if err != nil {
+					log.Printf("cannot open video writer: %v", err)
+					out_path = ""
+				}
+			}
+			if writer != nil {
+				writer.Write(result.mat)
+			}
+		}
 
 		window.IMShow(result.mat)
 		result.mat.Close()

@@ -202,12 +202,163 @@ const (
 	minPartScore       = 0.5
 )
 
+// Temporal smoothing for video: per-frame inference is independent, so a
+// keypoint whose score briefly dips below minPartScore (an arm passing in
+// front of the torso, for example) makes its bones flicker. Tracks blend
+// scores and positions over time, which rides out one-frame dips.
+const (
+	smoothPosAlpha   = 0.6 // weight of the new position
+	smoothScoreAlpha = 0.3 // weight of the new score
+	trackPosScore    = 0.3 // ignore positions of keypoints below this score
+	trackMatchRadius = 80.0
+	trackMaxMiss     = 5
+	trackMissDecay   = 0.7 // score decay per frame while a track goes undetected
+	// Hysteresis: a keypoint starts being drawn at minPartScore but keeps
+	// being drawn until its score falls below trackHideScore, so scores
+	// hovering around the threshold do not blink.
+	trackHideScore = 0.25
+)
+
+type track struct {
+	pose    pose
+	visible []bool
+	center  vector2d
+	miss    int
+	matched bool
+}
+
+func (t *track) updateVisibility() {
+	for i, k := range t.pose.keypoints {
+		if t.visible[i] {
+			if k.score < trackHideScore {
+				t.visible[i] = false
+			}
+		} else if k.score >= minPartScore {
+			t.visible[i] = true
+		}
+	}
+}
+
+// display returns the pose to draw: keypoints that hysteresis keeps visible
+// get their score lifted to the drawing threshold.
+func (t *track) display() pose {
+	keypoints := make([]*keypoint, len(t.pose.keypoints))
+	for i, k := range t.pose.keypoints {
+		kk := *k
+		if t.visible[i] && kk.score < minPartScore {
+			kk.score = minPartScore
+		}
+		keypoints[i] = &kk
+	}
+	return pose{keypoints: keypoints, score: t.pose.score}
+}
+
+func poseCenter(p pose) vector2d {
+	var c vector2d
+	n := 0
+	for _, k := range p.keypoints {
+		if k.score < trackPosScore {
+			continue
+		}
+		c.x += k.position.x
+		c.y += k.position.y
+		n++
+	}
+	if n == 0 {
+		for _, k := range p.keypoints {
+			c.x += k.position.x
+			c.y += k.position.y
+		}
+		n = len(p.keypoints)
+	}
+	c.x /= float64(n)
+	c.y /= float64(n)
+	return c
+}
+
+func (t *track) blend(p pose) {
+	t.pose.score = smoothScoreAlpha*p.score + (1-smoothScoreAlpha)*t.pose.score
+	for i, n := range p.keypoints {
+		o := t.pose.keypoints[i]
+		o.score = smoothScoreAlpha*n.score + (1-smoothScoreAlpha)*o.score
+		if n.score >= trackPosScore {
+			o.position.x = smoothPosAlpha*n.position.x + (1-smoothPosAlpha)*o.position.x
+			o.position.y = smoothPosAlpha*n.position.y + (1-smoothPosAlpha)*o.position.y
+		}
+	}
+	t.center = poseCenter(t.pose)
+}
+
+type poseTracker struct {
+	tracks []*track
+}
+
+func (pt *poseTracker) update(poses []pose) []pose {
+	for _, t := range pt.tracks {
+		t.matched = false
+	}
+	for _, p := range poses {
+		c := poseCenter(p)
+		best := -1
+		bestD := trackMatchRadius * trackMatchRadius
+		for i, t := range pt.tracks {
+			if t.matched {
+				continue
+			}
+			if d := squaredDistance(c.x, c.y, t.center.x, t.center.y); d < bestD {
+				bestD = d
+				best = i
+			}
+		}
+		var t *track
+		if best < 0 {
+			keypoints := make([]*keypoint, len(p.keypoints))
+			for i, k := range p.keypoints {
+				kk := *k
+				keypoints[i] = &kk
+			}
+			t = &track{pose: pose{keypoints: keypoints, score: p.score}, visible: make([]bool, len(keypoints)), center: c}
+			pt.tracks = append(pt.tracks, t)
+		} else {
+			t = pt.tracks[best]
+			t.blend(p)
+		}
+		t.matched = true
+		t.updateVisibility()
+	}
+
+	// Keep undetected tracks alive for a few frames with decaying scores, so
+	// a pose the model misses for a frame or two fades instead of blinking.
+	out := make([]pose, 0, len(pt.tracks))
+	alive := pt.tracks[:0]
+	for _, t := range pt.tracks {
+		if t.matched {
+			t.miss = 0
+		} else {
+			t.miss++
+			t.pose.score *= trackMissDecay
+			for _, k := range t.pose.keypoints {
+				k.score *= trackMissDecay
+			}
+			t.updateVisibility()
+		}
+		if t.miss <= trackMaxMiss {
+			alive = append(alive, t)
+			out = append(out, t.display())
+		}
+	}
+	pt.tracks = alive
+	return out
+}
+
 func main() {
 	var model_path, image_path, video_path, out_path string
+	var smooth bool
 	flag.StringVar(&model_path, "model", "multi_person_mobilenet_v1_075_float.tflite", "path to model file")
 	flag.StringVar(&image_path, "image", "", "path to image file; when set, writes output.png instead of using the camera")
 	flag.StringVar(&video_path, "camera", "0", "video capture source (device number or video file)")
 	flag.StringVar(&out_path, "out", "", "write the annotated video to this file (.mp4 or .avi)")
+	flag.BoolVar(&smooth, "smooth", true, "smooth keypoints over time to reduce flicker in video mode")
 	flag.Parse()
 
 	model := tflite.NewModelFromFile(model_path)
@@ -243,7 +394,7 @@ func main() {
 	if image_path != "" {
 		runImage(interpreter, image_path)
 	} else {
-		runVideo(interpreter, video_path, out_path)
+		runVideo(interpreter, video_path, out_path, smooth)
 	}
 }
 
@@ -378,7 +529,7 @@ func drawPoses(mat *gocv.Mat, poses []pose) {
 	}
 }
 
-func runVideo(interpreter *tflite.Interpreter, video_path, out_path string) {
+func runVideo(interpreter *tflite.Interpreter, video_path, out_path string, smooth bool) {
 	cam, err := gocv.OpenVideoCapture(video_path)
 	if err != nil {
 		log.Printf("cannot open camera: %v", err)
@@ -430,12 +581,17 @@ func runVideo(interpreter *tflite.Interpreter, video_path, out_path string) {
 	frames := 0
 	second := time.Tick(time.Second)
 
+	var tracker poseTracker
+
 	for {
 		result, ok := <-resultChan
 		if !ok {
 			break
 		}
 
+		if smooth {
+			result.poses = tracker.update(result.poses)
+		}
 		drawPoses(&result.mat, result.poses)
 
 		if out_path != "" {

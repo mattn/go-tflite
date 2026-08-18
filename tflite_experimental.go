@@ -385,3 +385,9 @@ func (t *Tensor) GetString(index int) string {
 	offset2 := int(*(*C.int32_t)(unsafe.Pointer(ptr + uintptr(4*(index+2)))))
 	return string((*((*[1<<31 - 1]uint8)(unsafe.Pointer(ptr))))[offset1:offset2])
 }
+
+// Cancel cancel the in-flight invocation of the signature runner. Requires
+// EnableCancellation on the options used to create the interpreter.
+func (r *SignatureRunner) Cancel() Status {
+	return Status(C.TfLiteSignatureRunnerCancel(r.r))
+}

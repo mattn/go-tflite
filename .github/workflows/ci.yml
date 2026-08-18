@@ -43,7 +43,7 @@ jobs:
           sudo ldconfig
 
       - name: Build
-        run: go build .
+        run: go build . ./delegates/xnnpack
 
       - name: Test
         run: go test -v .

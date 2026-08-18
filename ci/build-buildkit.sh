@@ -7,6 +7,9 @@
 #   include/tensorflow/lite/...      TensorFlow Lite headers (only the ones
 #                                    actually included, computed via gcc -M)
 #   lib/libtensorflowlite_c.so       TensorFlow Lite C API shared library
+#   lib/libtensorflowlite-delegate_xnnpack.so
+#                                    XNNPACK delegate shared library
+#   lib/libXNNPACK.so                XNNPACK itself
 #
 # Run from the go-tflite repository root.
 #
@@ -39,7 +42,31 @@ export TF_SET_ANDROID_WORKSPACE=0
 export CC_OPT_FLAGS=${CC_OPT_FLAGS:--O2}
 python3 configure.py
 
-bazel build -c opt //tensorflow/lite/c:tensorflowlite_c
+# Upstream has no shared-library targets for the XNNPACK delegate, so append
+# them to the BUILD file (guarded so a re-run on the same checkout is a no-op).
+if ! grep -q 'libtensorflowlite-delegate_xnnpack' tensorflow/lite/delegates/xnnpack/BUILD; then
+  cat >> tensorflow/lite/delegates/xnnpack/BUILD <<'EOF'
+
+cc_binary(
+    name = "libtensorflowlite-delegate_xnnpack.so",
+    linkopts = ["-Wl,-soname,libtensorflowlite-delegate_xnnpack.so"],
+    linkshared = True,
+    deps = [":xnnpack_delegate"],
+)
+
+cc_binary(
+    name = "libXNNPACK.so",
+    linkopts = ["-Wl,-soname,libXNNPACK.so"],
+    linkshared = True,
+    deps = ["@XNNPACK//:XNNPACK"],
+)
+EOF
+fi
+
+bazel build -c opt \
+  //tensorflow/lite/c:tensorflowlite_c \
+  //tensorflow/lite/delegates/xnnpack:libtensorflowlite-delegate_xnnpack.so \
+  //tensorflow/lite/delegates/xnnpack:libXNNPACK.so
 
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
@@ -47,14 +74,20 @@ mkdir -p "$STAGE/include" "$STAGE/lib"
 
 # Collect only the headers go-tflite actually includes, plus their transitive
 # includes, computed by the C preprocessor.
-grep -h '#include <tensorflow/' "$GO_TFLITE_ROOT"/*.go.h \
+grep -h '#include <tensorflow/' \
+  "$GO_TFLITE_ROOT"/*.go.h \
+  "$GO_TFLITE_ROOT"/delegates/xnnpack/*.go.h \
   | sed 's/<\(.*\)>/"\1"/' > "$STAGE/probe.c"
 gcc -M -I. "$STAGE/probe.c" \
   | tr ' \\' '\n' | grep '^tensorflow/lite/' | sort -u \
   | while read -r f; do
       install -D -m 644 "$f" "$STAGE/include/$f"
     done
-install -m 755 bazel-bin/tensorflow/lite/c/libtensorflowlite_c.so "$STAGE/lib/"
+install -m 755 \
+  bazel-bin/tensorflow/lite/c/libtensorflowlite_c.so \
+  bazel-bin/tensorflow/lite/delegates/xnnpack/libtensorflowlite-delegate_xnnpack.so \
+  bazel-bin/tensorflow/lite/delegates/xnnpack/libXNNPACK.so \
+  "$STAGE/lib/"
 rm -f "$STAGE/probe.c"
 
 mkdir -p "$OUT_DIR"

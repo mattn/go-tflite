@@ -385,3 +385,18 @@ func (t *Tensor) GetString(index int) string {
 	offset2 := int(*(*C.int32_t)(unsafe.Pointer(ptr + uintptr(4*(index+2)))))
 	return string((*((*[1<<31 - 1]uint8)(unsafe.Pointer(ptr))))[offset1:offset2])
 }
+
+// GetVariableTensorCount return number of variable tensors associated with
+// the interpreter.
+func (i *Interpreter) GetVariableTensorCount() int {
+	return int(C.TfLiteInterpreterGetVariableTensorCount(i.i))
+}
+
+// GetVariableTensor return the variable tensor specified by index.
+func (i *Interpreter) GetVariableTensor(index int) *Tensor {
+	t := C.TfLiteInterpreterGetVariableTensor(i.i, C.int32_t(index))
+	if t == nil {
+		return nil
+	}
+	return &Tensor{t: t}
+}

@@ -263,3 +263,99 @@ func (t *Tensor) CopyFromBuffer(b interface{}) Status {
 func (t *Tensor) CopyToBuffer(b interface{}) Status {
 	return Status(C.TfLiteTensorCopyToBuffer(t.t, unsafe.Pointer(reflect.ValueOf(b).Pointer()), C.size_t(t.ByteSize())))
 }
+
+// SignatureRunner implement TfLiteSignatureRunner. It is used to run
+// inference on a specific SavedModel signature.
+type SignatureRunner struct {
+	r *C.TfLiteSignatureRunner
+}
+
+// GetSignatureCount return the number of signatures defined in the model.
+func (i *Interpreter) GetSignatureCount() int {
+	return int(C.TfLiteInterpreterGetSignatureCount(i.i))
+}
+
+// GetSignatureKey return the key of the signature specified by index.
+func (i *Interpreter) GetSignatureKey(index int) string {
+	return C.GoString(C.TfLiteInterpreterGetSignatureKey(i.i, C.int32_t(index)))
+}
+
+// GetSignatureRunner return the runner for the signature specified by key.
+// The returned runner must be deleted with Delete before the interpreter is
+// deleted.
+func (i *Interpreter) GetSignatureRunner(key string) *SignatureRunner {
+	ptr := C.CString(key)
+	defer C.free(unsafe.Pointer(ptr))
+	r := C.TfLiteInterpreterGetSignatureRunner(i.i, ptr)
+	if r == nil {
+		return nil
+	}
+	return &SignatureRunner{r: r}
+}
+
+// GetInputCount return number of inputs of the signature.
+func (r *SignatureRunner) GetInputCount() int {
+	return int(C.TfLiteSignatureRunnerGetInputCount(r.r))
+}
+
+// GetInputName return name of the input specified by index.
+func (r *SignatureRunner) GetInputName(index int) string {
+	return C.GoString(C.TfLiteSignatureRunnerGetInputName(r.r, C.int32_t(index)))
+}
+
+// ResizeInputTensor resize the input tensor specified by name with dims.
+func (r *SignatureRunner) ResizeInputTensor(name string, dims []int32) Status {
+	ptr := C.CString(name)
+	defer C.free(unsafe.Pointer(ptr))
+	s := C.TfLiteSignatureRunnerResizeInputTensor(r.r, ptr, (*C.int)(unsafe.Pointer(&dims[0])), C.int32_t(len(dims)))
+	return Status(s)
+}
+
+// AllocateTensors allocate tensors for the signature runner.
+func (r *SignatureRunner) AllocateTensors() Status {
+	return Status(C.TfLiteSignatureRunnerAllocateTensors(r.r))
+}
+
+// GetInputTensor return the input tensor specified by name.
+func (r *SignatureRunner) GetInputTensor(name string) *Tensor {
+	ptr := C.CString(name)
+	defer C.free(unsafe.Pointer(ptr))
+	t := C.TfLiteSignatureRunnerGetInputTensor(r.r, ptr)
+	if t == nil {
+		return nil
+	}
+	return &Tensor{t: t}
+}
+
+// Invoke run the signature.
+func (r *SignatureRunner) Invoke() Status {
+	return Status(C.TfLiteSignatureRunnerInvoke(r.r))
+}
+
+// GetOutputCount return number of outputs of the signature.
+func (r *SignatureRunner) GetOutputCount() int {
+	return int(C.TfLiteSignatureRunnerGetOutputCount(r.r))
+}
+
+// GetOutputName return name of the output specified by index.
+func (r *SignatureRunner) GetOutputName(index int) string {
+	return C.GoString(C.TfLiteSignatureRunnerGetOutputName(r.r, C.int32_t(index)))
+}
+
+// GetOutputTensor return the output tensor specified by name.
+func (r *SignatureRunner) GetOutputTensor(name string) *Tensor {
+	ptr := C.CString(name)
+	defer C.free(unsafe.Pointer(ptr))
+	t := C.TfLiteSignatureRunnerGetOutputTensor(r.r, ptr)
+	if t == nil {
+		return nil
+	}
+	return &Tensor{t: (*C.TfLiteTensor)(t)}
+}
+
+// Delete delete instance of the signature runner.
+func (r *SignatureRunner) Delete() {
+	if r != nil {
+		C.TfLiteSignatureRunnerDelete(r.r)
+	}
+}

@@ -1,0 +1,39 @@
+name: Docker
+
+on:
+  workflow_dispatch:
+    inputs:
+      go_tflite_version:
+        description: go-tflite version to bake into the image
+        default: v1.0.7
+      buildkit_version:
+        description: release tag whose buildkit tarball to use
+        default: v1.0.7
+      image_tag:
+        description: image tag to publish
+        default: latest
+
+permissions:
+  packages: write
+  contents: read
+
+jobs:
+  gophernotes-tflite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: docker/gophernotes-tflite
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/gophernotes-tflite:${{ inputs.image_tag }}
+          build-args: |
+            GO_TFLITE_VERSION=${{ inputs.go_tflite_version }}
+            BUILDKIT_VERSION=${{ inputs.buildkit_version }}

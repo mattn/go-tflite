@@ -385,3 +385,10 @@ func (t *Tensor) GetString(index int) string {
 	offset2 := int(*(*C.int32_t)(unsafe.Pointer(ptr + uintptr(4*(index+2)))))
 	return string((*((*[1<<31 - 1]uint8)(unsafe.Pointer(ptr))))[offset1:offset2])
 }
+
+// SetEnableDelegateFallback enable or disable fallback to CPU when delegate
+// application or invocation fails. When enabled and Invoke returns an error,
+// the interpreter automatically falls back to not using any delegates.
+func (o *InterpreterOptions) SetEnableDelegateFallback(enable bool) {
+	C.TfLiteInterpreterOptionsSetEnableDelegateFallback(o.o, C.bool(enable))
+}

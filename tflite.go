@@ -425,3 +425,34 @@ func (o *InterpreterOptions) Copy() *InterpreterOptions {
 	}
 	return &InterpreterOptions{o: c}
 }
+
+// NewModelWithErrorReporter create new Model from buffer. The reporter is
+// called with error messages produced while loading the model.
+func NewModelWithErrorReporter(model_data []byte, f func(string, interface{}), user_data interface{}) *Model {
+	data := C.CBytes(model_data)
+	m := C._TfLiteModelCreateWithErrorReporter(data, C.size_t(len(model_data)), pointer.Save(&callbackInfo{
+		user_data: user_data,
+		f:         f,
+	}))
+	if m == nil {
+		C.free(data)
+		return nil
+	}
+	return &Model{m: m, data: data}
+}
+
+// NewModelFromFileWithErrorReporter create new Model from file data. The
+// reporter is called with error messages produced while loading the model.
+func NewModelFromFileWithErrorReporter(model_path string, f func(string, interface{}), user_data interface{}) *Model {
+	ptr := C.CString(model_path)
+	defer C.free(unsafe.Pointer(ptr))
+
+	m := C._TfLiteModelCreateFromFileWithErrorReporter(ptr, pointer.Save(&callbackInfo{
+		user_data: user_data,
+		f:         f,
+	}))
+	if m == nil {
+		return nil
+	}
+	return &Model{m: m}
+}

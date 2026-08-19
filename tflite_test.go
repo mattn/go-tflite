@@ -156,3 +156,26 @@ func TestTensorIndices(t *testing.T) {
 		t.Fatalf("want %q but got %q", want, got)
 	}
 }
+
+func TestModelWithErrorReporter(t *testing.T) {
+	var messages []string
+	reporter := func(msg string, user_data interface{}) {
+		messages = append(messages, msg)
+	}
+
+	model := NewModelFromFileWithErrorReporter("testdata/xor_model.tflite", reporter, nil)
+	if model == nil {
+		t.Fatal("cannot load model")
+	}
+	model.Delete()
+
+	broken := NewModelWithErrorReporter([]byte("not a tflite model"), reporter, nil)
+	if broken != nil {
+		broken.Delete()
+		t.Fatal("expected failure for a broken model")
+	}
+	if len(messages) == 0 {
+		t.Fatal("error reporter was not called")
+	}
+	t.Logf("reported: %q", messages)
+}

@@ -385,3 +385,9 @@ func (t *Tensor) GetString(index int) string {
 	offset2 := int(*(*C.int32_t)(unsafe.Pointer(ptr + uintptr(4*(index+2)))))
 	return string((*((*[1<<31 - 1]uint8)(unsafe.Pointer(ptr))))[offset1:offset2])
 }
+
+// EnsureTensorDataIsReadable ensure the data of the tensor specified by
+// index in the global tensor list is readable.
+func (i *Interpreter) EnsureTensorDataIsReadable(index int) Status {
+	return Status(C.TfLiteInterpreterEnsureTensorDataIsReadable(i.i, C.int(index)))
+}

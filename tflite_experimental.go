@@ -413,3 +413,18 @@ func (i *Interpreter) GetInputTensorIndex(input_index int) int {
 func (i *Interpreter) GetOutputTensorIndex(output_index int) int {
 	return int(C.TfLiteInterpreterGetOutputTensorIndex(i.i, C.int32_t(output_index)))
 }
+
+// GetVariableTensorCount return number of variable tensors associated with
+// the interpreter.
+func (i *Interpreter) GetVariableTensorCount() int {
+	return int(C.TfLiteInterpreterGetVariableTensorCount(i.i))
+}
+
+// GetVariableTensor return the variable tensor specified by index.
+func (i *Interpreter) GetVariableTensor(index int) *Tensor {
+	t := C.TfLiteInterpreterGetVariableTensor(i.i, C.int32_t(index))
+	if t == nil {
+		return nil
+	}
+	return &Tensor{t: t}
+}

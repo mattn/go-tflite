@@ -88,6 +88,8 @@ import (
 	"encoding/binary"
 	"io"
 	"unsafe"
+
+	"github.com/mattn/go-tflite/delegates"
 )
 
 const sizeof_int32_t = 4
@@ -384,4 +386,10 @@ func (t *Tensor) GetString(index int) string {
 	offset1 := int(*(*C.int32_t)(unsafe.Pointer(ptr + uintptr(4*(index+1)))))
 	offset2 := int(*(*C.int32_t)(unsafe.Pointer(ptr + uintptr(4*(index+2)))))
 	return string((*((*[1<<31 - 1]uint8)(unsafe.Pointer(ptr))))[offset1:offset2])
+}
+
+// ModifyGraphWithDelegate apply the delegate to the interpreter after
+// creation. Prefer passing delegates via InterpreterOptions.AddDelegate.
+func (i *Interpreter) ModifyGraphWithDelegate(d delegates.Delegater) Status {
+	return Status(C.TfLiteInterpreterModifyGraphWithDelegate(i.i, (*C.TfLiteDelegate)(d.Ptr())))
 }

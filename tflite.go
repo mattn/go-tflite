@@ -374,3 +374,17 @@ func (r *SignatureRunner) Delete() {
 		C.TfLiteSignatureRunnerDelete(r.r)
 	}
 }
+
+// EnableCancellation enable or disable cancellation for the interpreter
+// created with these options. When enabled, an in-flight Invoke call can be
+// aborted with Interpreter.Cancel.
+func (o *InterpreterOptions) EnableCancellation(enable bool) Status {
+	return Status(C.TfLiteInterpreterOptionsEnableCancellation(o.o, C.bool(enable)))
+}
+
+// Cancel cancel the in-flight invocation. The Invoke call aborted this way
+// returns an error status. Requires EnableCancellation on the options used
+// to create the interpreter.
+func (i *Interpreter) Cancel() Status {
+	return Status(C.TfLiteInterpreterCancel(i.i))
+}

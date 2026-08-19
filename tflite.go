@@ -19,6 +19,21 @@ import (
 
 //go:generate stringer -type TensorType,Status -output type_string.go .
 
+// Version return version string of TensorFlow Lite.
+func Version() string {
+	return C.GoString(C.TfLiteVersion())
+}
+
+// ExtensionApisVersion return version string of the TensorFlow Lite Extension APIs.
+func ExtensionApisVersion() string {
+	return C.GoString(C.TfLiteExtensionApisVersion())
+}
+
+// SchemaVersion return the supported version of the TensorFlow Lite model schema.
+func SchemaVersion() int {
+	return int(C.TfLiteSchemaVersion())
+}
+
 // Model is TfLiteModel.
 type Model struct {
 	m    *C.TfLiteModel

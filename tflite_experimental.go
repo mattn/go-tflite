@@ -428,3 +428,10 @@ func (i *Interpreter) GetVariableTensor(index int) *Tensor {
 	}
 	return &Tensor{t: t}
 }
+
+// SetEnableDelegateFallback enable or disable fallback to CPU when delegate
+// application or invocation fails. When enabled and Invoke returns an error,
+// the interpreter automatically falls back to not using any delegates.
+func (o *InterpreterOptions) SetEnableDelegateFallback(enable bool) {
+	C.TfLiteInterpreterOptionsSetEnableDelegateFallback(o.o, C.bool(enable))
+}

@@ -21,4 +21,14 @@ static void
 _TfLiteInterpreterOptionsSetErrorReporter(TfLiteInterpreterOptions* options, void* user_data) {
   TfLiteInterpreterOptionsSetErrorReporter(options, _error_reporter, user_data);
 }
+
+static TfLiteModel*
+_TfLiteModelCreateWithErrorReporter(void* model_data, size_t model_size, void* user_data) {
+  return TfLiteModelCreateWithErrorReporter(model_data, model_size, _error_reporter, user_data);
+}
+
+static TfLiteModel*
+_TfLiteModelCreateFromFileWithErrorReporter(const char* model_path, void* user_data) {
+  return TfLiteModelCreateFromFileWithErrorReporter(model_path, _error_reporter, user_data);
+}
 #endif

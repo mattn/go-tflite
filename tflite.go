@@ -263,3 +263,12 @@ func (t *Tensor) CopyFromBuffer(b interface{}) Status {
 func (t *Tensor) CopyToBuffer(b interface{}) Status {
 	return Status(C.TfLiteTensorCopyToBuffer(t.t, unsafe.Pointer(reflect.ValueOf(b).Pointer()), C.size_t(t.ByteSize())))
 }
+
+// Copy return a copy of the interpreter options.
+func (o *InterpreterOptions) Copy() *InterpreterOptions {
+	c := C.TfLiteInterpreterOptionsCopy(o.o)
+	if c == nil {
+		return nil
+	}
+	return &InterpreterOptions{o: c}
+}

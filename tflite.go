@@ -119,6 +119,9 @@ type Interpreter struct {
 
 // NewInterpreter create new Interpreter.
 func NewInterpreter(model *Model, options *InterpreterOptions) *Interpreter {
+	if model == nil || model.m == nil {
+		return nil
+	}
 	var o *C.TfLiteInterpreterOptions
 	if options != nil {
 		o = options.o

@@ -179,3 +179,16 @@ func TestModelWithErrorReporter(t *testing.T) {
 	}
 	t.Logf("reported: %q", messages)
 }
+
+func TestNewInterpreterNilModel(t *testing.T) {
+	model := NewModelFromFile("testdata/no_such_model.tflite")
+	if model != nil {
+		t.Fatal("expected nil model for a missing file")
+	}
+	if interpreter := NewInterpreter(model, nil); interpreter != nil {
+		t.Fatal("expected nil interpreter for a nil model")
+	}
+	if interpreter := NewInterpreter(nil, nil); interpreter != nil {
+		t.Fatal("expected nil interpreter for a nil model")
+	}
+}

@@ -388,3 +388,31 @@ func (o *InterpreterOptions) EnableCancellation(enable bool) Status {
 func (i *Interpreter) Cancel() Status {
 	return Status(C.TfLiteInterpreterCancel(i.i))
 }
+
+// InputTensorIndices return the tensor indices of the input tensors in the
+// global tensor list of the interpreter.
+func (i *Interpreter) InputTensorIndices() []int {
+	p := C.TfLiteInterpreterInputTensorIndices(i.i)
+	if p == nil {
+		return nil
+	}
+	indices := make([]int, i.GetInputTensorCount())
+	for j := range indices {
+		indices[j] = int(*(*C.int)(unsafe.Pointer(uintptr(unsafe.Pointer(p)) + uintptr(j)*unsafe.Sizeof(*p))))
+	}
+	return indices
+}
+
+// OutputTensorIndices return the tensor indices of the output tensors in the
+// global tensor list of the interpreter.
+func (i *Interpreter) OutputTensorIndices() []int {
+	p := C.TfLiteInterpreterOutputTensorIndices(i.i)
+	if p == nil {
+		return nil
+	}
+	indices := make([]int, i.GetOutputTensorCount())
+	for j := range indices {
+		indices[j] = int(*(*C.int)(unsafe.Pointer(uintptr(unsafe.Pointer(p)) + uintptr(j)*unsafe.Sizeof(*p))))
+	}
+	return indices
+}

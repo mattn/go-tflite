@@ -1,8 +1,17 @@
 # go-tflite
 
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/mattn/go-tflite/master?labpath=iris.ipynb)
+
 Go binding for TensorFlow Lite
 
 ![](https://raw.githubusercontent.com/mattn/go-tflite/master/screenshots/screenshot.png)
+
+## Try it in your browser
+
+Click [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/mattn/go-tflite/master?labpath=iris.ipynb)
+to launch a Jupyter notebook with go-tflite preinstalled and train the iris
+classifier right in the browser, no install needed. The same image is
+available as `ghcr.io/mattn/go-tflite/gophernotes` (see docker/gophernotes).
 
 ## Usage
 

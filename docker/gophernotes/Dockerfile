@@ -63,7 +63,7 @@ RUN mkdir -p /tmp/warm && cd /tmp/warm \
  && cd / && rm -rf /tmp/warm
 
 WORKDIR /notebooks
-COPY go-tflite.ipynb .
+COPY go-tflite.ipynb iris.ipynb ./
 RUN cp "$(go env GOMODCACHE)/github.com/mattn/go-tflite@${GO_TFLITE_VERSION}/testdata/xor_model.tflite" .
 
 EXPOSE 8888

@@ -88,6 +88,8 @@ import (
 	"encoding/binary"
 	"io"
 	"unsafe"
+
+	"github.com/mattn/go-tflite/delegates"
 )
 
 const sizeof_int32_t = 4
@@ -434,4 +436,10 @@ func (i *Interpreter) GetVariableTensor(index int) *Tensor {
 // the interpreter automatically falls back to not using any delegates.
 func (o *InterpreterOptions) SetEnableDelegateFallback(enable bool) {
 	C.TfLiteInterpreterOptionsSetEnableDelegateFallback(o.o, C.bool(enable))
+}
+
+// ModifyGraphWithDelegate apply the delegate to the interpreter after
+// creation. Prefer passing delegates via InterpreterOptions.AddDelegate.
+func (i *Interpreter) ModifyGraphWithDelegate(d delegates.Delegater) Status {
+	return Status(C.TfLiteInterpreterModifyGraphWithDelegate(i.i, (*C.TfLiteDelegate)(d.Ptr())))
 }

@@ -62,9 +62,13 @@ RUN mkdir -p /tmp/warm && cd /tmp/warm \
  && go build -o /dev/null . \
  && cd / && rm -rf /tmp/warm
 
-WORKDIR /notebooks
-COPY go-tflite.ipynb iris.ipynb ./
-RUN cp "$(go env GOMODCACHE)/github.com/mattn/go-tflite@${GO_TFLITE_VERSION}/testdata/xor_model.tflite" .
+# Examples live outside /notebooks and are copied in by the entrypoint, so
+# they are still available when a host directory is mounted over /notebooks.
+COPY go-tflite.ipynb iris.ipynb /usr/local/share/gophernotes-examples/
+RUN cp "$(go env GOMODCACHE)/github.com/mattn/go-tflite@${GO_TFLITE_VERSION}/testdata/xor_model.tflite" /usr/local/share/gophernotes-examples/
 
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+WORKDIR /notebooks
 EXPOSE 8888
+ENTRYPOINT ["entrypoint.sh"]
 CMD ["jupyter", "notebook", "--no-browser", "--allow-root", "--ip=0.0.0.0"]

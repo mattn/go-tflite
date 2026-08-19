@@ -443,3 +443,9 @@ func (o *InterpreterOptions) SetEnableDelegateFallback(enable bool) {
 func (i *Interpreter) ModifyGraphWithDelegate(d delegates.Delegater) Status {
 	return Status(C.TfLiteInterpreterModifyGraphWithDelegate(i.i, (*C.TfLiteDelegate)(d.Ptr())))
 }
+
+// EnsureTensorDataIsReadable ensure the data of the tensor specified by
+// index in the global tensor list is readable.
+func (i *Interpreter) EnsureTensorDataIsReadable(index int) Status {
+	return Status(C.TfLiteInterpreterEnsureTensorDataIsReadable(i.i, C.int(index)))
+}

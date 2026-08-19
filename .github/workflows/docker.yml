@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 jobs:
-  gophernotes-tflite:
+  gophernotes:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,9 +31,9 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          context: docker/gophernotes-tflite
+          context: docker/gophernotes
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/gophernotes-tflite:${{ inputs.image_tag }}
+          tags: ghcr.io/${{ github.repository }}/gophernotes:${{ inputs.image_tag }}
           build-args: |
             GO_TFLITE_VERSION=${{ inputs.go_tflite_version }}
             BUILDKIT_VERSION=${{ inputs.buildkit_version }}

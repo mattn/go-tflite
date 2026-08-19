@@ -1,7 +1,7 @@
 # Jupyter + gophernotes with go-tflite ready to import.
 #
-#   docker build -t ghcr.io/mattn/gophernotes-tflite .
-#   docker run --rm -p 8888:8888 ghcr.io/mattn/gophernotes-tflite
+#   docker build -t ghcr.io/mattn/go-tflite/gophernotes .
+#   docker run --rm -p 8888:8888 ghcr.io/mattn/go-tflite/gophernotes
 #
 # The TensorFlow Lite C libraries come from the go-tflite buildkit that CI
 # attaches to releases, so no bazel build is involved.
@@ -24,6 +24,8 @@ RUN mkdir -p /src/gophernotes && cd /src/gophernotes \
 # The runtime image still needs the Go toolchain and gcc: gophernotes
 # compiles imported packages (go-tflite included, via cgo) on the fly.
 FROM debian:trixie-slim
+
+LABEL org.opencontainers.image.source=https://github.com/mattn/go-tflite
 
 ARG GO_TFLITE_VERSION=v1.0.7
 ARG BUILDKIT_VERSION=v1.0.7

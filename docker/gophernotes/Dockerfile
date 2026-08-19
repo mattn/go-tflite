@@ -6,7 +6,7 @@
 # The TensorFlow Lite C libraries come from the go-tflite buildkit that CI
 # attaches to releases, so no bazel build is involved.
 
-ARG GO_VERSION=1.25
+ARG GO_VERSION=1.26
 
 FROM golang:${GO_VERSION}-trixie AS build
 
@@ -32,6 +32,9 @@ ARG BUILDKIT_VERSION=v1.0.7
 
 COPY --from=build /usr/local/go /usr/local/go
 ENV GOPATH=/go
+# Plugins gomacro compiles at runtime must match the toolchain gophernotes
+# itself was built with, so never let go auto-switch toolchains.
+ENV GOTOOLCHAIN=local
 ENV PATH=/opt/jupyter/bin:/go/bin:/usr/local/go/bin:$PATH
 
 RUN apt-get update \

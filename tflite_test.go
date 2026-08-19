@@ -45,6 +45,16 @@ func TestXOR(t *testing.T) {
 	}
 }
 
+func TestVersion(t *testing.T) {
+	if Version() == "" {
+		t.Fatal("version is empty")
+	}
+	if SchemaVersion() <= 0 {
+		t.Fatalf("unexpected schema version: %v", SchemaVersion())
+	}
+	t.Logf("version=%s schema=%d extension_apis=%s", Version(), SchemaVersion(), ExtensionApisVersion())
+}
+
 func TestSignatureRunner(t *testing.T) {
 	model := NewModelFromFile("testdata/xor_model_sig.tflite")
 	if model == nil {

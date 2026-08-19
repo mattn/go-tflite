@@ -386,6 +386,12 @@ func (t *Tensor) GetString(index int) string {
 	return string((*((*[1<<31 - 1]uint8)(unsafe.Pointer(ptr))))[offset1:offset2])
 }
 
+// Cancel cancel the in-flight invocation of the signature runner. Requires
+// EnableCancellation on the options used to create the interpreter.
+func (r *SignatureRunner) Cancel() Status {
+	return Status(C.TfLiteSignatureRunnerCancel(r.r))
+}
+
 // GetTensor return the tensor specified by index in the global tensor list
 // of the interpreter.
 func (i *Interpreter) GetTensor(index int) *Tensor {

@@ -60,7 +60,9 @@ type WeightsCache struct {
 }
 
 // NewWeightsCache creates a new weights cache. Prefer NewWeightsCacheWithSize
-// which can reduce memory bandwidth.
+// with a size large enough for all packed weights: when the cache grows to
+// fit more weights, pointers held by the delegates created so far are
+// invalidated and inference crashes.
 func NewWeightsCache() *WeightsCache {
 	c := C.TfLiteXNNPackDelegateWeightsCacheCreate()
 	if c == nil {
@@ -70,7 +72,8 @@ func NewWeightsCache() *WeightsCache {
 }
 
 // NewWeightsCacheWithSize creates a new weights cache that can hold up to
-// size bytes without growing.
+// size bytes without growing. Make it large enough for all packed weights;
+// see NewWeightsCache for what happens when the cache grows.
 func NewWeightsCacheWithSize(size int) *WeightsCache {
 	c := C.TfLiteXNNPackDelegateWeightsCacheCreateWithSize(C.size_t(size))
 	if c == nil {

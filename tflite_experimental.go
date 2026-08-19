@@ -386,6 +386,49 @@ func (t *Tensor) GetString(index int) string {
 	return string((*((*[1<<31 - 1]uint8)(unsafe.Pointer(ptr))))[offset1:offset2])
 }
 
+// Cancel cancel the in-flight invocation of the signature runner. Requires
+// EnableCancellation on the options used to create the interpreter.
+func (r *SignatureRunner) Cancel() Status {
+	return Status(C.TfLiteSignatureRunnerCancel(r.r))
+}
+
+// GetTensor return the tensor specified by index in the global tensor list
+// of the interpreter.
+func (i *Interpreter) GetTensor(index int) *Tensor {
+	t := C.TfLiteInterpreterGetTensor(i.i, C.int(index))
+	if t == nil {
+		return nil
+	}
+	return &Tensor{t: t}
+}
+
+// GetInputTensorIndex return the index in the global tensor list of the
+// input tensor specified by input_index.
+func (i *Interpreter) GetInputTensorIndex(input_index int) int {
+	return int(C.TfLiteInterpreterGetInputTensorIndex(i.i, C.int32_t(input_index)))
+}
+
+// GetOutputTensorIndex return the index in the global tensor list of the
+// output tensor specified by output_index.
+func (i *Interpreter) GetOutputTensorIndex(output_index int) int {
+	return int(C.TfLiteInterpreterGetOutputTensorIndex(i.i, C.int32_t(output_index)))
+}
+
+// GetVariableTensorCount return number of variable tensors associated with
+// the interpreter.
+func (i *Interpreter) GetVariableTensorCount() int {
+	return int(C.TfLiteInterpreterGetVariableTensorCount(i.i))
+}
+
+// GetVariableTensor return the variable tensor specified by index.
+func (i *Interpreter) GetVariableTensor(index int) *Tensor {
+	t := C.TfLiteInterpreterGetVariableTensor(i.i, C.int32_t(index))
+	if t == nil {
+		return nil
+	}
+	return &Tensor{t: t}
+}
+
 // SetEnableDelegateFallback enable or disable fallback to CPU when delegate
 // application or invocation fails. When enabled and Invoke returns an error,
 // the interpreter automatically falls back to not using any delegates.

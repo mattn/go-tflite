@@ -416,3 +416,12 @@ func (i *Interpreter) OutputTensorIndices() []int {
 	}
 	return indices
 }
+
+// Copy return a copy of the interpreter options.
+func (o *InterpreterOptions) Copy() *InterpreterOptions {
+	c := C.TfLiteInterpreterOptionsCopy(o.o)
+	if c == nil {
+		return nil
+	}
+	return &InterpreterOptions{o: c}
+}

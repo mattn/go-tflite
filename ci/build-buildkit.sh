@@ -165,6 +165,13 @@ build_cmake() {
   fi
   cmake "${gen[@]}" -S "$src" -B "$build" -DCMAKE_BUILD_TYPE=Release \
     -DTFLITE_ENABLE_XNNPACK=ON
+  # cpuinfo relies on the max() macro from windows.h, which TensorFlow Lite's
+  # cmake disables globally with NOMINMAX. MSVC's stdlib.h provides another
+  # one, MinGW's does not.
+  local cpuinfo_init=$build/cpuinfo/src/x86/windows/init.c
+  if [ -f "$cpuinfo_init" ] && ! grep -q 'define max(' "$cpuinfo_init"; then
+    sed -i '1i #define max(a, b) (((a) > (b)) ? (a) : (b))' "$cpuinfo_init"
+  fi
   cmake --build "$build" --config Release --target tensorflowlite_c -j
   # Multi-config generators (MSVC) put outputs under Release/.
   local dir=$build

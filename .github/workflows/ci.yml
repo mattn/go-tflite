@@ -99,9 +99,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          mkdir -p "$RUNNER_TEMP/buildkit"
-          tar xzf dist/go-tflite-buildkit-*.tar.gz -C "$RUNNER_TEMP/buildkit"
-          kit=$(cygpath -m "$RUNNER_TEMP/buildkit")
+          dir=$(cygpath -u "$RUNNER_TEMP")/buildkit
+          mkdir -p "$dir"
+          tar xzf dist/go-tflite-buildkit-*.tar.gz -C "$dir"
+          kit=$(cygpath -m "$dir")
           echo "CGO_CFLAGS=-I$kit/include" >> "$GITHUB_ENV"
           echo "CGO_LDFLAGS=-L$kit/lib" >> "$GITHUB_ENV"
           echo "$kit/lib" >> "$GITHUB_PATH"

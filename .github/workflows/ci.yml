@@ -69,13 +69,24 @@ jobs:
         run: python3 -m pip install --user --break-system-packages numpy || python3 -m pip install --user numpy
 
       - name: Build buildkit
-        shell: ${{ matrix.toolchain == 'mingw' && 'msys2 {0}' || 'bash' }}
+        if: matrix.toolchain != 'mingw'
+        shell: bash
         run: ./ci/build-buildkit.sh
         env:
           TENSORFLOW_SRC: ${{ runner.temp }}/tensorflow_src
           OUT_DIR: ${{ github.workspace }}/dist
           TOOLCHAIN: ${{ matrix.toolchain }}
           BAZEL_OUTPUT_USER_ROOT: ${{ runner.os != 'Windows' && '~/.cache/bazel' || '' }}
+          BUILDKIT_SUFFIX: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}
+
+      - name: Build buildkit (MinGW)
+        if: matrix.toolchain == 'mingw'
+        shell: msys2 {0}
+        run: ./ci/build-buildkit.sh
+        env:
+          TENSORFLOW_SRC: ${{ runner.temp }}/tensorflow_src
+          OUT_DIR: ${{ github.workspace }}/dist
+          TOOLCHAIN: mingw
           BUILDKIT_SUFFIX: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}
 
       - name: Install buildkit into /usr/local

@@ -52,9 +52,10 @@ build the full TensorFlow library. There are three ways to get it.
 
 ### Prebuilt buildkit
 
-Each release ships `go-tflite-buildkit-<tag>-<os>-<arch>.tar.gz` for
-linux-amd64, linux-arm64, darwin-amd64, darwin-arm64 and windows-amd64,
-containing the headers and the TensorFlow Lite C API library.
+Each release ships `go-tflite-buildkit-<tag>-<target>.tar.gz` for
+linux-amd64, linux-arm64, darwin-amd64, darwin-arm64, windows-amd64-msvc and
+windows-amd64-mingw, containing the headers and the TensorFlow Lite C API
+library.
 
 On Linux and macOS it also contains the XNNPACK delegate libraries. Extract it
 into `/usr/local` and you are done:
@@ -65,11 +66,14 @@ $ sudo tar xzf /tmp/buildkit.tar.gz -C /usr/local
 $ sudo ldconfig   # Linux only
 ```
 
-On Windows it contains `tensorflowlite_c.dll` built with cmake and MSVC, with
-XNNPACK compiled in. Extract it anywhere and point cgo at it:
+On Windows it contains `tensorflowlite_c.dll` built with cmake, with XNNPACK
+compiled in. The `mingw` variant is built with MinGW-w64 gcc (the toolchain
+cgo uses) and ships `libtensorflowlite_c.dll.a`; the `msvc` variant is built
+with Visual C++ and ships `tensorflowlite_c.lib`. Either links with cgo.
+Extract it anywhere and point cgo at it:
 
 ```
-> tar xzf go-tflite-buildkit-v1.0.8-windows-amd64.tar.gz -C C:\tflite
+> tar xzf go-tflite-buildkit-v1.0.8-windows-amd64-mingw.tar.gz -C C:\tflite
 > set CGO_CFLAGS=-IC:/tflite/include
 > set CGO_LDFLAGS=-LC:/tflite/lib
 > set PATH=C:\tflite\lib;%PATH%

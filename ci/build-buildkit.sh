@@ -13,12 +13,14 @@
 #   lib/libXNNPACK.{so,dylib}        XNNPACK itself
 #
 # On Linux and macOS the libraries are built with bazel and extracting the
-# tarball into /usr/local is enough. On Windows they are built with cmake and
-# MSVC, which yields tensorflowlite_c.dll (+ .lib) with XNNPACK compiled in;
-# programs using delegates/xnnpack must then be built with
+# tarball into /usr/local is enough. On Windows they are built with cmake,
+# either with MSVC (tensorflowlite_c.dll + tensorflowlite_c.lib) or with
+# MinGW-w64 (libtensorflowlite_c.dll + libtensorflowlite_c.dll.a), and XNNPACK
+# is compiled in; programs using delegates/xnnpack must then be built with
 # `-tags xnnpack_builtin`.
 #
-# Run from the go-tflite repository root (Git Bash on Windows).
+# Run from the go-tflite repository root (Git Bash or an MSYS2 MINGW64 shell
+# on Windows).
 #
 # Environment variables:
 #   TENSORFLOW_VERSION  git tag/branch of tensorflow to build (default: v2.17.1)
@@ -26,6 +28,7 @@
 #   OUT_DIR             where to place the resulting tarball (default: ./dist)
 #   BUILDKIT_SUFFIX     suffix of the tarball name, typically a go-tflite
 #                       release tag (default: today's date as YYYYMMDD)
+#   TOOLCHAIN           Windows only: msvc (default) or mingw
 #   BAZEL_OUTPUT_USER_ROOT
 #                       if set, passed to bazel as --output_user_root so that
 #                       CI can cache it
@@ -47,6 +50,7 @@ case "$(uname -m)" in
   aarch64|arm64) ARCH=arm64 ;;
   *) echo "unsupported architecture: $(uname -m)" >&2; exit 1 ;;
 esac
+TOOLCHAIN=${TOOLCHAIN:-msvc}
 
 if [ "$OS" = windows ]; then
   # Git Bash: normalize Windows-style paths coming from the environment.
@@ -155,14 +159,20 @@ build_cmake() {
   sed -i.bak 's/set(CMAKE_CXX_STANDARD 17)/set(CMAKE_CXX_STANDARD 20)/' \
     tensorflow/lite/CMakeLists.txt tensorflow/lite/c/CMakeLists.txt
   rm -f tensorflow/lite/CMakeLists.txt.bak tensorflow/lite/c/CMakeLists.txt.bak
-  cmake -S "$src" -B "$build" -DCMAKE_BUILD_TYPE=Release \
+  local gen=()
+  if [ "$TOOLCHAIN" = mingw ]; then
+    gen=(-G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++)
+  fi
+  cmake "${gen[@]}" -S "$src" -B "$build" -DCMAKE_BUILD_TYPE=Release \
     -DTFLITE_ENABLE_XNNPACK=ON
   cmake --build "$build" --config Release --target tensorflowlite_c -j
   # Multi-config generators (MSVC) put outputs under Release/.
   local dir=$build
-  [ -f "$build/Release/tensorflowlite_c.dll" ] && dir=$build/Release
-  cp "$dir"/tensorflowlite_c.dll "$STAGE/lib/"
-  cp "$dir"/tensorflowlite_c.lib "$STAGE/lib/"
+  [ -d "$build/Release" ] && dir=$build/Release
+  # MSVC: tensorflowlite_c.dll + tensorflowlite_c.lib
+  # MinGW: libtensorflowlite_c.dll + libtensorflowlite_c.dll.a
+  cp "$dir"/*tensorflowlite_c.dll "$STAGE/lib/"
+  cp "$dir"/*tensorflowlite_c.lib "$dir"/*tensorflowlite_c.dll.a "$STAGE/lib/" 2>/dev/null || true
 }
 
 if [ "$OS" = windows ]; then
@@ -190,6 +200,8 @@ done
 rm -f "$STAGE/probe.c"
 
 mkdir -p "$OUT_DIR"
-NAME=go-tflite-buildkit-${BUILDKIT_SUFFIX:-$(date +%Y%m%d)}-$OS-$ARCH.tar.gz
+TARGET=$OS-$ARCH
+[ "$OS" = windows ] && TARGET=$TARGET-$TOOLCHAIN
+NAME=go-tflite-buildkit-${BUILDKIT_SUFFIX:-$(date +%Y%m%d)}-$TARGET.tar.gz
 tar czf "$OUT_DIR/$NAME" -C "$STAGE" include lib
 echo "created: $OUT_DIR/$NAME"

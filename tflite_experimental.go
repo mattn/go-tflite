@@ -44,13 +44,15 @@ static void look_context(TfLiteContext *context) {
   }
 }
 
+// writeToTensorAsVector takes ownership of bytes, which must have been
+// allocated with malloc. The tensor is marked kTfLiteDynamic so that
+// TensorFlow Lite frees it.
 static void writeToTensorAsVector(TfLiteTensor *tensor, char *bytes, size_t size, int nelem) {
   static TfLiteIntArray dummy;
   TfLiteIntArray* new_shape = (TfLiteIntArray*)malloc(sizeof(dummy) + sizeof(dummy.data[0]) * 1);
   if (new_shape) {
     new_shape->size = 1;
     new_shape->data[0] = nelem;
-    memcpy(new_shape->data, tensor->dims->data, tensor->dims->size * sizeof(int));
   }
 
   // TfLiteTensorDataFree
@@ -76,7 +78,7 @@ static void writeToTensorAsVector(TfLiteTensor *tensor, char *bytes, size_t size
   tensor->dims = new_shape;
   tensor->data.raw = bytes;
   tensor->bytes = size;
-  tensor->allocation_type = kTfLiteMmapRo;
+  tensor->allocation_type = kTfLiteDynamic;
 
   tensor->quantization.type = kTfLiteNoQuantization;
   tensor->quantization.params = NULL;
@@ -369,8 +371,10 @@ func (d *DynamicBuffer) WriteToTensorAsVector(t *Tensor) {
 		io.Copy(&out, &d.data)
 	}
 
+	// Copy into C memory: the tensor keeps the pointer after this call
+	// returns, so it must not point at a Go-managed buffer.
 	b = out.Bytes()
-	C.writeToTensorAsVector(t.t, (*C.char)(unsafe.Pointer(&b[0])), C.size_t(len(b)), C.int(len(d.offset)))
+	C.writeToTensorAsVector(t.t, (*C.char)(C.CBytes(b)), C.size_t(len(b)), C.int(len(d.offset)))
 }
 
 // GetString returns string in the string buffer.

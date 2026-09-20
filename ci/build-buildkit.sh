@@ -150,6 +150,11 @@ build_cmake() {
   # It has to be an environment variable to reach the nested cmake processes
   # that download them.
   export CMAKE_POLICY_VERSION_MINIMUM=3.5
+  # MSVC only accepts the designated initializers used by TensorFlow Lite in
+  # C++20 mode; upstream has since moved its cmake build to C++20 as well.
+  sed -i.bak 's/set(CMAKE_CXX_STANDARD 17)/set(CMAKE_CXX_STANDARD 20)/' \
+    tensorflow/lite/CMakeLists.txt tensorflow/lite/c/CMakeLists.txt
+  rm -f tensorflow/lite/CMakeLists.txt.bak tensorflow/lite/c/CMakeLists.txt.bak
   cmake -S "$src" -B "$build" -DCMAKE_BUILD_TYPE=Release \
     -DTFLITE_ENABLE_XNNPACK=ON
   cmake --build "$build" --config Release --target tensorflowlite_c -j

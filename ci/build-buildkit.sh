@@ -68,6 +68,13 @@ mkdir -p "$STAGE/include" "$STAGE/lib"
 cd "$TENSORFLOW_SRC"
 
 build_bazel() {
+  # Newer libc++ (Xcode 16.3+) rejects taking the address of std::abs<T>;
+  # upstream replaced these with lambdas after 2.19, so do the same here.
+  sed -i.bak \
+    -e 's/std::abs<float>, type)/[](float f) { return std::abs(f); }, type)/' \
+    -e 's/std::abs<int32_t>, type)/[](int32_t i) { return std::abs(i); }, type)/' \
+    tensorflow/lite/kernels/elementwise.cc && rm -f tensorflow/lite/kernels/elementwise.cc.bak
+
   # Non-interactive configure: CPU only, no Android/iOS, default toolchain.
   export PYTHON_BIN_PATH=${PYTHON_BIN_PATH:-$(command -v python3)}
   export TF_NEED_CUDA=0
@@ -138,10 +145,13 @@ build_cmake() {
   local src build
   src=$(cygpath -m "$PWD/tensorflow/lite/c")
   build=$(cygpath -m "${TFLITE_BUILD:-$TENSORFLOW_SRC/../tflite_build}")
-  # CMAKE_POLICY_VERSION_MINIMUM: some dependencies (FP16) still declare
-  # cmake_minimum_required < 3.5, which CMake 4 rejects otherwise.
+  # CMAKE_POLICY_VERSION_MINIMUM: some dependencies (FP16, psimd) still
+  # declare cmake_minimum_required < 3.5, which CMake 4 rejects otherwise.
+  # It has to be an environment variable to reach the nested cmake processes
+  # that download them.
+  export CMAKE_POLICY_VERSION_MINIMUM=3.5
   cmake -S "$src" -B "$build" -DCMAKE_BUILD_TYPE=Release \
-    -DTFLITE_ENABLE_XNNPACK=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+    -DTFLITE_ENABLE_XNNPACK=ON
   cmake --build "$build" --config Release --target tensorflowlite_c -j
   # Multi-config generators (MSVC) put outputs under Release/.
   local dir=$build

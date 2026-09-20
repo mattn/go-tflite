@@ -172,6 +172,12 @@ build_cmake() {
   if [ -f "$cpuinfo_init" ] && ! grep -q 'define max(' "$cpuinfo_init"; then
     sed -i '1i #define max(a, b) (((a) > (b)) ? (a) : (b))' "$cpuinfo_init"
   fi
+  # gemmlowp adds MSVC-only compiler flags under a plain if(WIN32), which a
+  # MinGW gcc does not understand.
+  local gemmlowp_cmake=$build/gemmlowp/contrib/CMakeLists.txt
+  if [ "$TOOLCHAIN" = mingw ] && [ -f "$gemmlowp_cmake" ]; then
+    sed -i '/add_definitions(\/bigobj/d' "$gemmlowp_cmake"
+  fi
   cmake --build "$build" --config Release --target tensorflowlite_c -j
   # Multi-config generators (MSVC) put outputs under Release/.
   local dir=$build
@@ -179,8 +185,27 @@ build_cmake() {
   # MSVC: tensorflowlite_c.dll + tensorflowlite_c.lib
   # MinGW: libtensorflowlite_c.dll + libtensorflowlite_c.dll.a
   cp "$dir"/*tensorflowlite_c.dll "$STAGE/lib/"
-  cp "$dir"/*tensorflowlite_c.lib "$dir"/*tensorflowlite_c.dll.a "$STAGE/lib/" 2>/dev/null || true
+  for f in "$dir"/*tensorflowlite_c.lib "$dir"/*tensorflowlite_c.dll.a; do
+    [ -f "$f" ] && cp "$f" "$STAGE/lib/"
+  done
+
+  # cgo links with gcc even when the DLL itself was built by MSVC, and GNU ld
+  # cannot always use an MSVC import library, so derive one from the DLL.
+  if [ ! -f "$STAGE/lib/libtensorflowlite_c.dll.a" ] \
+     && command -v objdump >/dev/null && command -v dlltool >/dev/null; then
+    local dll=$STAGE/lib/tensorflowlite_c.dll
+    { echo "LIBRARY tensorflowlite_c.dll"; echo EXPORTS; \
+      objdump -p "$dll" | awk '
+        /\[Ordinal\/Name Pointer\] Table/ { t = 1; next }
+        t && /^[ \t]*\[ *[0-9]+\]/ { sub(/^[ \t]*\[ *[0-9]+\][ \t]*/, ""); print $1; next }
+        t && NF == 0 { t = 0 }'; \
+    } > "$STAGE/lib/tensorflowlite_c.def"
+    dlltool -d "$STAGE/lib/tensorflowlite_c.def" -D tensorflowlite_c.dll \
+      -l "$STAGE/lib/libtensorflowlite_c.dll.a"
+    rm -f "$STAGE/lib/tensorflowlite_c.def"
+  fi
 }
+
 
 if [ "$OS" = windows ]; then
   build_cmake
@@ -212,3 +237,4 @@ TARGET=$OS-$ARCH
 NAME=go-tflite-buildkit-${BUILDKIT_SUFFIX:-$(date +%Y%m%d)}-$TARGET.tar.gz
 tar czf "$OUT_DIR/$NAME" -C "$STAGE" include lib
 echo "created: $OUT_DIR/$NAME"
+tar tzf "$OUT_DIR/$NAME" | grep -v '^include/' || true

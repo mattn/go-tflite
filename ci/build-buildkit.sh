@@ -178,12 +178,21 @@ build_cmake() {
   if [ "$TOOLCHAIN" = mingw ] && [ -f "$gemmlowp_cmake" ]; then
     sed -i '/add_definitions(\/bigobj/d' "$gemmlowp_cmake"
   fi
+  # The XNNPACK weight cache picks between an mmap and a read implementation
+  # with _MSC_VER, so MinGW ends up on the POSIX branch and looks for
+  # sys/mman.h. The Windows branch compiles fine with MinGW.
+  if [ "$TOOLCHAIN" = mingw ]; then
+    sed -i 's/defined(_MSC_VER)/defined(_WIN32)/g' \
+      tensorflow/lite/delegates/xnnpack/weight_cache.cc
+  fi
   cmake --build "$build" --config Release --target tensorflowlite_c -j
   # Multi-config generators (MSVC) put outputs under Release/.
   local dir=$build
   [ -d "$build/Release" ] && dir=$build/Release
   # MSVC: tensorflowlite_c.dll + tensorflowlite_c.lib
   # MinGW: libtensorflowlite_c.dll + libtensorflowlite_c.dll.a
+  echo "cmake output in $dir:"
+  ls -l "$dir" | grep -i tensorflowlite_c || true
   cp "$dir"/*tensorflowlite_c.dll "$STAGE/lib/"
   for f in "$dir"/*tensorflowlite_c.lib "$dir"/*tensorflowlite_c.dll.a; do
     [ -f "$f" ] && cp "$f" "$STAGE/lib/"
@@ -200,6 +209,14 @@ build_cmake() {
         t && /^[ \t]*\[ *[0-9]+\]/ { sub(/^[ \t]*\[ *[0-9]+\][ \t]*/, ""); print $1; next }
         t && NF == 0 { t = 0 }'; \
     } > "$STAGE/lib/tensorflowlite_c.def"
+    local nexport
+    nexport=$(($(wc -l < "$STAGE/lib/tensorflowlite_c.def") - 2))
+    echo "exports found in tensorflowlite_c.dll: $nexport"
+    if [ "$nexport" -lt 1 ]; then
+      echo "could not read the export table of tensorflowlite_c.dll" >&2
+      objdump -p "$dll" | head -40 >&2
+      exit 1
+    fi
     dlltool -d "$STAGE/lib/tensorflowlite_c.def" -D tensorflowlite_c.dll \
       -l "$STAGE/lib/libtensorflowlite_c.dll.a"
     rm -f "$STAGE/lib/tensorflowlite_c.def"

@@ -41,31 +41,66 @@ See `_example` for more examples
 
 ## Requirements
 
-* TensorFlow Lite - This release requires 2.2.0-rc3
+* TensorFlow Lite C API (`libtensorflowlite_c.so`). CI builds and tests
+  against TensorFlow v2.17.1; other recent versions should work as long as
+  the C API is compatible.
 
 ## Tensorflow Installation
 
-You must install Tensorflow Lite C API. go-tflite links against
-`libtensorflowlite_c.so` only, so there is no need to build the full
-TensorFlow library. Assuming the source is under /source/directory/tensorflow
+go-tflite links against `libtensorflowlite_c.so` only, so there is no need to
+build the full TensorFlow library. There are three ways to get it.
+
+### Prebuilt buildkit (Linux x86_64)
+
+Each release ships a `go-tflite-buildkit-<tag>.tar.gz` containing the headers,
+`libtensorflowlite_c.so` and the XNNPACK delegate libraries. Extract it into
+`/usr/local` and you are done:
+
+```
+$ curl -fSL -o /tmp/buildkit.tar.gz https://github.com/mattn/go-tflite/releases/download/v1.0.7/go-tflite-buildkit-v1.0.7.tar.gz
+$ sudo tar xzf /tmp/buildkit.tar.gz -C /usr/local
+$ sudo ldconfig
+```
+
+`ci/build-buildkit.sh` is the script that produces this tarball, so you can
+run it yourself for other platforms or TensorFlow versions.
+
+### Build with bazel
 
 ```
 $ cd /source/directory/tensorflow
-$ bazel build --config opt --config monolithic //tensorflow/lite/c:libtensorflowlite_c.so
+$ bazel build -c opt //tensorflow/lite/c:tensorflowlite_c
 ```
 
-In order for go to find the headers you must set the CGO_CFLAGS environment variable for the source and libraries of tensorflow.
-If your libraries are not installed in a standard location, you must also give the go linker the path to the shared librares
-with the CGO_LDFLAGS environment variable.
+The XNNPACK delegate has no shared library target upstream; see
+`ci/build-buildkit.sh` for how to add one.
+
+### Build with cmake
+
+```
+$ cmake -S /source/directory/tensorflow/tensorflow/lite/c -B tflite_build
+$ cmake --build tflite_build -j
+```
+
+This produces `tflite_build/libtensorflowlite_c.so` with XNNPACK compiled in.
+Because there is no separate `libtensorflowlite-delegate_xnnpack.so` in this
+case, build programs that use `delegates/xnnpack` with
+`-tags xnnpack_builtin` so that only `libtensorflowlite_c` is linked.
+
+There is also `Makefile.tflite`, a plain Makefile that builds
+`libtensorflowlite_c` when placed in `tensorflow/lite/c`; it is not regularly
+tested.
+
+### Environment variables
+
+If the headers and libraries are not installed in a standard location, tell
+cgo where to find them:
 
 ```
 $ export CGO_CFLAGS=-I/source/directory/tensorflow
-$ export CGO_LDFLAGS=-L/path/to/tensorflow/libaries
+$ export CGO_LDFLAGS=-L/path/to/tensorflow/libraries
+$ export LD_LIBRARY_PATH=/path/to/tensorflow/libraries
 ```
-
-If you don't love bazel, you can try `Makefile.tflite`. 
-Put this file as `Makefile` in `tensorflow/lite/c`, and run `make`. 
-Sorry, this has not been test for Linux or Mac
 
 Then run `go build` on some of the examples.
 

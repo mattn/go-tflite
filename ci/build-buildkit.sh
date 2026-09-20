@@ -80,6 +80,10 @@ build_bazel() {
 
   if [ "$OS" = darwin ]; then
     EXT=dylib
+    # bazel 6's Apple toolchain wrapper (wrapped_clang) is linked without
+    # LC_UUID and macOS 15.4+ refuses to run it; the plain Unix toolchain
+    # drives clang directly and is enough for TensorFlow Lite.
+    export BAZEL_USE_CPP_ONLY_TOOLCHAIN=1
     # Bake in the install location so binaries find the libraries without
     # DYLD_LIBRARY_PATH once the buildkit is extracted into /usr/local.
     SONAME_FLAG=-Wl,-install_name,/usr/local/lib/
@@ -134,8 +138,10 @@ build_cmake() {
   local src build
   src=$(cygpath -m "$PWD/tensorflow/lite/c")
   build=$(cygpath -m "${TFLITE_BUILD:-$TENSORFLOW_SRC/../tflite_build}")
+  # CMAKE_POLICY_VERSION_MINIMUM: some dependencies (FP16) still declare
+  # cmake_minimum_required < 3.5, which CMake 4 rejects otherwise.
   cmake -S "$src" -B "$build" -DCMAKE_BUILD_TYPE=Release \
-    -DTFLITE_ENABLE_XNNPACK=ON
+    -DTFLITE_ENABLE_XNNPACK=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5
   cmake --build "$build" --config Release --target tensorflowlite_c -j
   # Multi-config generators (MSVC) put outputs under Release/.
   local dir=$build

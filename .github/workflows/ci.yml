@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   TENSORFLOW_VERSION: v2.17.1
 
@@ -24,7 +28,7 @@ jobs:
             target: linux-amd64
           - os: ubuntu-24.04-arm
             target: linux-arm64
-          - os: macos-13
+          - os: macos-15-intel
             target: darwin-amd64
           - os: macos-latest
             target: darwin-arm64

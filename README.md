@@ -50,20 +50,34 @@ See `_example` for more examples
 go-tflite links against `libtensorflowlite_c.so` only, so there is no need to
 build the full TensorFlow library. There are three ways to get it.
 
-### Prebuilt buildkit (Linux x86_64)
+### Prebuilt buildkit
 
-Each release ships a `go-tflite-buildkit-<tag>.tar.gz` containing the headers,
-`libtensorflowlite_c.so` and the XNNPACK delegate libraries. Extract it into
-`/usr/local` and you are done:
+Each release ships `go-tflite-buildkit-<tag>-<os>-<arch>.tar.gz` for
+linux-amd64, linux-arm64, darwin-amd64, darwin-arm64 and windows-amd64,
+containing the headers and the TensorFlow Lite C API library.
+
+On Linux and macOS it also contains the XNNPACK delegate libraries. Extract it
+into `/usr/local` and you are done:
 
 ```
-$ curl -fSL -o /tmp/buildkit.tar.gz https://github.com/mattn/go-tflite/releases/download/v1.0.7/go-tflite-buildkit-v1.0.7.tar.gz
+$ curl -fSL -o /tmp/buildkit.tar.gz https://github.com/mattn/go-tflite/releases/download/v1.0.8/go-tflite-buildkit-v1.0.8-linux-amd64.tar.gz
 $ sudo tar xzf /tmp/buildkit.tar.gz -C /usr/local
-$ sudo ldconfig
+$ sudo ldconfig   # Linux only
 ```
 
-`ci/build-buildkit.sh` is the script that produces this tarball, so you can
-run it yourself for other platforms or TensorFlow versions.
+On Windows it contains `tensorflowlite_c.dll` built with cmake and MSVC, with
+XNNPACK compiled in. Extract it anywhere and point cgo at it:
+
+```
+> tar xzf go-tflite-buildkit-v1.0.8-windows-amd64.tar.gz -C C:\tflite
+> set CGO_CFLAGS=-IC:/tflite/include
+> set CGO_LDFLAGS=-LC:/tflite/lib
+> set PATH=C:\tflite\lib;%PATH%
+> go build -tags xnnpack_builtin .
+```
+
+`ci/build-buildkit.sh` is the script that produces these tarballs, so you can
+run it yourself for other TensorFlow versions.
 
 ### Build with bazel
 

@@ -16,7 +16,21 @@ env:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-amd64
+          - os: ubuntu-24.04-arm
+            target: linux-arm64
+          - os: macos-13
+            target: darwin-amd64
+          - os: macos-latest
+            target: darwin-arm64
+          - os: windows-latest
+            target: windows-amd64
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -25,36 +39,61 @@ jobs:
           go-version: stable
 
       - name: Cache bazel
+        if: runner.os != 'Windows'
         uses: actions/cache@v4
         with:
           path: ~/.cache/bazel
-          key: bazel-${{ runner.os }}-${{ env.TENSORFLOW_VERSION }}
+          key: bazel-${{ matrix.target }}-${{ env.TENSORFLOW_VERSION }}
+
+      - name: Install numpy
+        if: runner.os != 'Windows'
+        run: python3 -m pip install --user --break-system-packages numpy || python3 -m pip install --user numpy
 
       - name: Build buildkit
+        shell: bash
         run: ./ci/build-buildkit.sh
         env:
           TENSORFLOW_SRC: ${{ runner.temp }}/tensorflow_src
           OUT_DIR: ${{ github.workspace }}/dist
+          BAZEL_OUTPUT_USER_ROOT: ${{ runner.os != 'Windows' && '~/.cache/bazel' || '' }}
           BUILDKIT_SUFFIX: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}
 
       - name: Install buildkit into /usr/local
+        if: runner.os != 'Windows'
         run: |
           sudo tar xzf dist/go-tflite-buildkit-*.tar.gz -C /usr/local
-          sudo ldconfig
+          if [ "$RUNNER_OS" = Linux ]; then sudo ldconfig; fi
+
+      - name: Install buildkit
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/buildkit"
+          tar xzf dist/go-tflite-buildkit-*.tar.gz -C "$RUNNER_TEMP/buildkit"
+          kit=$(cygpath -m "$RUNNER_TEMP/buildkit")
+          echo "CGO_CFLAGS=-I$kit/include" >> "$GITHUB_ENV"
+          echo "CGO_LDFLAGS=-L$kit/lib" >> "$GITHUB_ENV"
+          echo "$kit/lib" >> "$GITHUB_PATH"
 
       - name: Build
+        if: runner.os != 'Windows'
         run: go build . ./delegates/xnnpack
+
+      - name: Build
+        if: runner.os == 'Windows'
+        run: go build -tags xnnpack_builtin . ./delegates/xnnpack
 
       - name: Test
         run: go test -v .
 
       - uses: actions/upload-artifact@v4
         with:
-          name: go-tflite-buildkit
+          name: go-tflite-buildkit-${{ matrix.target }}
           path: dist/*.tar.gz
 
       - name: Upload buildkit to release
         if: github.event_name == 'release'
+        shell: bash
         run: gh release upload "$GITHUB_REF_NAME" dist/*.tar.gz --clobber
         env:
           GH_TOKEN: ${{ github.token }}

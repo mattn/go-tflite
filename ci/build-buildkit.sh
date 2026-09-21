@@ -212,7 +212,7 @@ build_cmake() {
     { echo "LIBRARY tensorflowlite_c.dll"; echo EXPORTS; \
       objdump -p "$dll" | awk '
         /\[Ordinal\/Name Pointer\] Table/ { t = 1; next }
-        t && /^[ \t]*\[ *[0-9]+\]/ { sub(/^[ \t]*\[ *[0-9]+\][ \t]*/, ""); print $1; next }
+        t && /^[ \t]*\[ *[0-9]+\]/ { sub(/^[ \t]*\[ *[0-9]+\][ \t]*/, ""); print "\"" $1 "\""; next }
         t && NF == 0 { t = 0 }'; \
     } > "$STAGE/lib/tensorflowlite_c.def"
     local nexport

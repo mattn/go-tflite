@@ -13,14 +13,12 @@
 #   lib/libXNNPACK.{so,dylib}        XNNPACK itself
 #
 # On Linux and macOS the libraries are built with bazel and extracting the
-# tarball into /usr/local is enough. On Windows they are built with cmake,
-# either with MSVC (tensorflowlite_c.dll + tensorflowlite_c.lib) or with
-# MinGW-w64 (libtensorflowlite_c.dll + libtensorflowlite_c.dll.a), and XNNPACK
-# is compiled in; programs using delegates/xnnpack must then be built with
-# `-tags xnnpack_builtin`.
+# tarball into /usr/local is enough. On Windows they are built with cmake and
+# MinGW-w64 (libtensorflowlite_c.dll + libtensorflowlite_c.dll.a), the
+# toolchain cgo drives, and XNNPACK is compiled in; programs using
+# delegates/xnnpack must then be built with `-tags xnnpack_builtin`.
 #
-# Run from the go-tflite repository root (Git Bash or an MSYS2 MINGW64 shell
-# on Windows).
+# Run from the go-tflite repository root, in an MSYS2 MINGW64 shell on Windows.
 #
 # Environment variables:
 #   TENSORFLOW_VERSION  git tag/branch of tensorflow to build (default: v2.17.1)
@@ -28,7 +26,6 @@
 #   OUT_DIR             where to place the resulting tarball (default: ./dist)
 #   BUILDKIT_SUFFIX     suffix of the tarball name, typically a go-tflite
 #                       release tag (default: today's date as YYYYMMDD)
-#   TOOLCHAIN           Windows only: msvc (default) or mingw
 #   BAZEL_OUTPUT_USER_ROOT
 #                       if set, passed to bazel as --output_user_root so that
 #                       CI can cache it
@@ -50,7 +47,6 @@ case "$(uname -m)" in
   aarch64|arm64) ARCH=arm64 ;;
   *) echo "unsupported architecture: $(uname -m)" >&2; exit 1 ;;
 esac
-TOOLCHAIN=${TOOLCHAIN:-msvc}
 
 if [ "$OS" = windows ]; then
   # Git Bash: normalize Windows-style paths coming from the environment.
@@ -154,26 +150,16 @@ build_cmake() {
   # It has to be an environment variable to reach the nested cmake processes
   # that download them.
   export CMAKE_POLICY_VERSION_MINIMUM=3.5
-  # MSVC only accepts the designated initializers used by TensorFlow Lite in
-  # C++20 mode; upstream has since moved its cmake build to C++20 as well.
+  # The designated initializers used by TensorFlow Lite need C++20 here;
+  # upstream has since moved its cmake build to C++20 as well.
   sed -i.bak 's/set(CMAKE_CXX_STANDARD 17)/set(CMAKE_CXX_STANDARD 20)/' \
     tensorflow/lite/CMakeLists.txt tensorflow/lite/c/CMakeLists.txt
   rm -f tensorflow/lite/CMakeLists.txt.bak tensorflow/lite/c/CMakeLists.txt.bak
-  local gen=()
-  if [ "$TOOLCHAIN" = mingw ]; then
-    gen=(-G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++)
-  else
-    # Linking the static tensorflow-lite defines TFL_STATIC_LIBRARY_BUILD,
-    # which makes TFL_CAPI_EXPORT expand to nothing, so MSVC exports nothing
-    # at all from the DLL. Export what tensorflowlite_c itself defines, which
-    # is the C API and what GNU ld does by default.
-    gen=(-DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=ON)
-  fi
-  cmake "${gen[@]}" -S "$src" -B "$build" -DCMAKE_BUILD_TYPE=Release \
+  cmake -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ \
+    -S "$src" -B "$build" -DCMAKE_BUILD_TYPE=Release \
     -DTFLITE_ENABLE_XNNPACK=ON
   # cpuinfo relies on the max() macro from windows.h, which TensorFlow Lite's
-  # cmake disables globally with NOMINMAX. MSVC's stdlib.h provides another
-  # one, MinGW's does not.
+  # cmake disables globally with NOMINMAX, and MinGW's stdlib.h has none.
   local cpuinfo_init=$build/cpuinfo/src/x86/windows/init.c
   if [ -f "$cpuinfo_init" ] && ! grep -q 'define max(' "$cpuinfo_init"; then
     sed -i '1i #define max(a, b) (((a) > (b)) ? (a) : (b))' "$cpuinfo_init"
@@ -181,52 +167,20 @@ build_cmake() {
   # gemmlowp adds MSVC-only compiler flags under a plain if(WIN32), which a
   # MinGW gcc does not understand.
   local gemmlowp_cmake=$build/gemmlowp/contrib/CMakeLists.txt
-  if [ "$TOOLCHAIN" = mingw ] && [ -f "$gemmlowp_cmake" ]; then
+  if [ -f "$gemmlowp_cmake" ]; then
     sed -i '/add_definitions(\/bigobj/d' "$gemmlowp_cmake"
   fi
   # The XNNPACK weight cache picks between an mmap and a read implementation
   # with _MSC_VER, so MinGW ends up on the POSIX branch and looks for
   # sys/mman.h. The Windows branch compiles fine with MinGW.
-  if [ "$TOOLCHAIN" = mingw ]; then
-    sed -i 's/defined(_MSC_VER)/defined(_WIN32)/g' \
-      tensorflow/lite/delegates/xnnpack/weight_cache.cc
-  fi
-  cmake --build "$build" --config Release --target tensorflowlite_c -j
-  # Multi-config generators (MSVC) put outputs under Release/.
-  local dir=$build
-  [ -d "$build/Release" ] && dir=$build/Release
-  # MSVC: tensorflowlite_c.dll + tensorflowlite_c.lib
-  # MinGW: libtensorflowlite_c.dll + libtensorflowlite_c.dll.a
-  echo "cmake output in $dir:"
-  ls -l "$dir" | grep -i tensorflowlite_c || true
-  cp "$dir"/*tensorflowlite_c.dll "$STAGE/lib/"
-  for f in "$dir"/*tensorflowlite_c.lib "$dir"/*tensorflowlite_c.dll.a; do
-    [ -f "$f" ] && cp "$f" "$STAGE/lib/"
-  done
-
-  # cgo links with gcc even when the DLL itself was built by MSVC, and GNU ld
-  # cannot always use an MSVC import library, so derive one from the DLL.
-  if [ ! -f "$STAGE/lib/libtensorflowlite_c.dll.a" ] \
-     && command -v objdump >/dev/null && command -v dlltool >/dev/null; then
-    local dll=$STAGE/lib/tensorflowlite_c.dll
-    { echo "LIBRARY tensorflowlite_c.dll"; echo EXPORTS; \
-      objdump -p "$dll" | awk '
-        /\[Ordinal\/Name Pointer\] Table/ { t = 1; next }
-        t && /^[ \t]*\[ *[0-9]+\]/ { sub(/^[ \t]*\[ *[0-9]+\][ \t]*/, ""); print "\"" $1 "\""; next }
-        t && NF == 0 { t = 0 }'; \
-    } > "$STAGE/lib/tensorflowlite_c.def"
-    local nexport
-    nexport=$(($(wc -l < "$STAGE/lib/tensorflowlite_c.def") - 2))
-    echo "exports found in tensorflowlite_c.dll: $nexport"
-    if [ "$nexport" -lt 1 ]; then
-      echo "could not read the export table of tensorflowlite_c.dll" >&2
-      objdump -p "$dll" | head -40 >&2
-      exit 1
-    fi
-    dlltool -d "$STAGE/lib/tensorflowlite_c.def" -D tensorflowlite_c.dll \
-      -l "$STAGE/lib/libtensorflowlite_c.dll.a"
-    rm -f "$STAGE/lib/tensorflowlite_c.def"
-  fi
+  sed -i 's/defined(_MSC_VER)/defined(_WIN32)/g' \
+    tensorflow/lite/delegates/xnnpack/weight_cache.cc
+  cmake --build "$build" --target tensorflowlite_c -j
+  # ld exports every symbol it links and writes the import library itself.
+  echo "cmake output in $build:"
+  ls -l "$build" | grep -i tensorflowlite_c || true
+  cp "$build/libtensorflowlite_c.dll" "$build/libtensorflowlite_c.dll.a" \
+    "$STAGE/lib/"
 }
 
 
@@ -256,7 +210,7 @@ rm -f "$STAGE/probe.c"
 
 mkdir -p "$OUT_DIR"
 TARGET=$OS-$ARCH
-[ "$OS" = windows ] && TARGET=$TARGET-$TOOLCHAIN
+[ "$OS" = windows ] && TARGET=$TARGET-mingw
 NAME=go-tflite-buildkit-${BUILDKIT_SUFFIX:-$(date +%Y%m%d)}-$TARGET.tar.gz
 tar czf "$OUT_DIR/$NAME" -C "$STAGE" include lib
 echo "created: $OUT_DIR/$NAME"

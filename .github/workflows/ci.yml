@@ -33,17 +33,13 @@ jobs:
           - os: macos-latest
             target: darwin-arm64
           - os: windows-latest
-            target: windows-amd64-msvc
-            toolchain: msvc
-          - os: windows-latest
             target: windows-amd64-mingw
-            toolchain: mingw
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: msys2/setup-msys2@v2
-        if: matrix.toolchain == 'mingw'
+        if: runner.os == 'Windows'
         with:
           msystem: MINGW64
           update: true
@@ -69,24 +65,22 @@ jobs:
         run: python3 -m pip install --user --break-system-packages numpy || python3 -m pip install --user numpy
 
       - name: Build buildkit
-        if: matrix.toolchain != 'mingw'
+        if: runner.os != 'Windows'
         shell: bash
         run: ./ci/build-buildkit.sh
         env:
           TENSORFLOW_SRC: ${{ runner.temp }}/tensorflow_src
           OUT_DIR: ${{ github.workspace }}/dist
-          TOOLCHAIN: ${{ matrix.toolchain }}
-          BAZEL_OUTPUT_USER_ROOT: ${{ runner.os != 'Windows' && '~/.cache/bazel' || '' }}
+          BAZEL_OUTPUT_USER_ROOT: ~/.cache/bazel
           BUILDKIT_SUFFIX: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}
 
-      - name: Build buildkit (MinGW)
-        if: matrix.toolchain == 'mingw'
+      - name: Build buildkit
+        if: runner.os == 'Windows'
         shell: msys2 {0}
         run: ./ci/build-buildkit.sh
         env:
           TENSORFLOW_SRC: ${{ runner.temp }}/tensorflow_src
           OUT_DIR: ${{ github.workspace }}/dist
-          TOOLCHAIN: mingw
           BUILDKIT_SUFFIX: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}
 
       - name: Install buildkit into /usr/local

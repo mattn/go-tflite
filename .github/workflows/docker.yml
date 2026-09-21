@@ -5,10 +5,10 @@ on:
     inputs:
       go_tflite_version:
         description: go-tflite version to bake into the image
-        default: v1.0.7
+        default: v1.0.8
       buildkit_version:
         description: release tag whose buildkit tarball to use
-        default: v1.0.7
+        default: v1.0.8
       image_tag:
         description: image tag to publish
         default: latest

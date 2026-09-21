@@ -162,6 +162,12 @@ build_cmake() {
   local gen=()
   if [ "$TOOLCHAIN" = mingw ]; then
     gen=(-G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++)
+  else
+    # Linking the static tensorflow-lite defines TFL_STATIC_LIBRARY_BUILD,
+    # which makes TFL_CAPI_EXPORT expand to nothing, so MSVC exports nothing
+    # at all from the DLL. Export what tensorflowlite_c itself defines, which
+    # is the C API and what GNU ld does by default.
+    gen=(-DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=ON)
   fi
   cmake "${gen[@]}" -S "$src" -B "$build" -DCMAKE_BUILD_TYPE=Release \
     -DTFLITE_ENABLE_XNNPACK=ON

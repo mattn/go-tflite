@@ -183,6 +183,29 @@ build_cmake() {
     "$STAGE/lib/"
 }
 
+# Link a C program against the staged buildkit the way cgo does. The C API is
+# declared __declspec(dllimport) on Windows, so cgo only ever references the
+# __imp_ symbols an import library provides; a Windows buildkit that misses
+# them packs fine and fails much later, when a Go binary is linked.
+verify_link() {
+  cat > "$STAGE/linkprobe.c" <<'EOP'
+#include <tensorflow/lite/c/c_api.h>
+
+int main(void) {
+  return TfLiteModelCreate(TfLiteVersion(), 1) == NULL;
+}
+EOP
+  if ! gcc "-I$(cygpath -m "$STAGE/include")" "$STAGE/linkprobe.c" \
+       "-L$(cygpath -m "$STAGE/lib")" -ltensorflowlite_c \
+       -o "$STAGE/linkprobe.exe"; then
+    echo "the buildkit cannot be linked with gcc" >&2
+    ls -l "$STAGE/lib" >&2
+    nm --defined-only "$STAGE/lib"/*.dll.a 2>/dev/null \
+      | grep __imp_ | head -5 >&2 || true
+    exit 1
+  fi
+  rm -f "$STAGE/linkprobe.c" "$STAGE/linkprobe.exe"
+}
 
 if [ "$OS" = windows ]; then
   build_cmake
@@ -207,6 +230,10 @@ echo "$headers" | while read -r f; do
   cp "$f" "$STAGE/include/$f"
 done
 rm -f "$STAGE/probe.c"
+
+if [ "$OS" = windows ]; then
+  verify_link
+fi
 
 mkdir -p "$OUT_DIR"
 TARGET=$OS-$ARCH

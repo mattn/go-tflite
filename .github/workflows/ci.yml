@@ -52,6 +52,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
+          # The Go build and test caches are keyed on the Go sources and the
+          # cgo flags, not on the buildkit they link against, so a restored
+          # cache happily reports a pass for a buildkit that cannot be used.
+          cache: false
 
       - name: Cache bazel
         if: runner.os != 'Windows'
@@ -113,6 +117,7 @@ jobs:
         run: go test -v .
 
       - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
         with:
           name: go-tflite-buildkit-${{ matrix.target }}
           path: dist/*.tar.gz

@@ -28,7 +28,7 @@ FROM debian:trixie-slim
 LABEL org.opencontainers.image.source=https://github.com/mattn/go-tflite
 
 ARG GO_TFLITE_VERSION=v1.0.8
-ARG BUILDKIT_VERSION=v1.0.8
+ARG BUILDKIT_VERSION=v1.0.10
 
 COPY --from=build /usr/local/go /usr/local/go
 ENV GOPATH=/go
@@ -48,7 +48,7 @@ RUN apt-get update \
 # TensorFlow Lite C API + XNNPACK delegate libraries and headers.
 ARG TARGETOS
 ARG TARGETARCH
-ADD https://github.com/mattn/go-tflite/releases/download/${BUILDKIT_VERSION}/go-tflite-buildkit-${BUILDKIT_VERSION}-${TARGETOS}-${TARGETARCH}.tar.gz /tmp/buildkit.tar.gz
+ADD https://github.com/mattn/go-tflite/releases/download/${BUILDKIT_VERSION}/tflite-buildkit-${BUILDKIT_VERSION}-${TARGETOS}-${TARGETARCH}.tar.gz /tmp/buildkit.tar.gz
 RUN tar -C /usr/local -xzf /tmp/buildkit.tar.gz && rm /tmp/buildkit.tar.gz && ldconfig
 
 # gophernotes kernel.

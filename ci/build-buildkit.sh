@@ -238,7 +238,7 @@ fi
 mkdir -p "$OUT_DIR"
 TARGET=$OS-$ARCH
 [ "$OS" = windows ] && TARGET=$TARGET-mingw
-NAME=go-tflite-buildkit-${BUILDKIT_SUFFIX:-$(date +%Y%m%d)}-$TARGET.tar.gz
+NAME=tflite-buildkit-${BUILDKIT_SUFFIX:-$(date +%Y%m%d)}-$TARGET.tar.gz
 tar czf "$OUT_DIR/$NAME" -C "$STAGE" include lib
 echo "created: $OUT_DIR/$NAME"
 tar tzf "$OUT_DIR/$NAME" | grep -v '^include/' || true

@@ -52,7 +52,7 @@ build the full TensorFlow library. There are three ways to get it.
 
 ### Prebuilt buildkit
 
-Each release ships `go-tflite-buildkit-<tag>-<target>.tar.gz` for
+Each release ships `tflite-buildkit-<tag>-<target>.tar.gz` for
 linux-amd64, linux-arm64, darwin-amd64, darwin-arm64 and windows-amd64-mingw,
 containing the headers and the TensorFlow Lite C API library.
 
@@ -60,7 +60,7 @@ On Linux and macOS it also contains the XNNPACK delegate libraries. Extract it
 into `/usr/local` and you are done:
 
 ```
-$ curl -fSL -o /tmp/buildkit.tar.gz https://github.com/mattn/go-tflite/releases/download/v1.0.8/go-tflite-buildkit-v1.0.8-linux-amd64.tar.gz
+$ curl -fSL -o /tmp/buildkit.tar.gz https://github.com/mattn/go-tflite/releases/download/v1.0.10/tflite-buildkit-v1.0.10-linux-amd64.tar.gz
 $ sudo tar xzf /tmp/buildkit.tar.gz -C /usr/local
 $ sudo ldconfig   # Linux only
 ```
@@ -71,7 +71,7 @@ MinGW-w64 gcc, the toolchain cgo drives, with XNNPACK compiled in, plus the
 at it:
 
 ```
-> tar xzf go-tflite-buildkit-v1.0.8-windows-amd64-mingw.tar.gz -C C:\tflite
+> tar xzf tflite-buildkit-v1.0.10-windows-amd64-mingw.tar.gz -C C:\tflite
 > set CGO_CFLAGS=-IC:/tflite/include
 > set CGO_LDFLAGS=-LC:/tflite/lib
 > set PATH=C:\tflite\lib;%PATH%

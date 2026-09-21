@@ -90,7 +90,7 @@ jobs:
       - name: Install buildkit into /usr/local
         if: runner.os != 'Windows'
         run: |
-          sudo tar xzf dist/go-tflite-buildkit-*.tar.gz -C /usr/local
+          sudo tar xzf dist/tflite-buildkit-*.tar.gz -C /usr/local
           if [ "$RUNNER_OS" = Linux ]; then sudo ldconfig; fi
 
       - name: Install buildkit
@@ -99,7 +99,7 @@ jobs:
         run: |
           dir=$(cygpath -u "$RUNNER_TEMP")/buildkit
           mkdir -p "$dir"
-          tar xzf dist/go-tflite-buildkit-*.tar.gz -C "$dir"
+          tar xzf dist/tflite-buildkit-*.tar.gz -C "$dir"
           kit=$(cygpath -m "$dir")
           echo "CGO_CFLAGS=-I$kit/include" >> "$GITHUB_ENV"
           echo "CGO_LDFLAGS=-L$kit/lib" >> "$GITHUB_ENV"
@@ -119,7 +119,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: go-tflite-buildkit-${{ matrix.target }}
+          name: tflite-buildkit-${{ matrix.target }}
           path: dist/*.tar.gz
 
       - name: Upload buildkit to release
